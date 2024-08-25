@@ -17,8 +17,6 @@ import userService from "../service/userService";
 import notificationService from "../service/notificationService";
 import emailService from "../service/emailService";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 export const purchaseShares = async (req: Request, res: Response) => {
   const { userId, numberOfShares, purchasePrice } = req.body;
 

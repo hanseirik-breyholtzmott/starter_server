@@ -16,6 +16,7 @@ import userService from "../service/userService";
 import tokenService from "../service/tokenService";
 import sessionService from "../service/sessionService";
 import notificationService from "../service/notificationService";
+import emailService from "../service/emailService";
 
 /*
  *
@@ -47,8 +48,6 @@ import notificationService from "../service/notificationService";
  *    - 504 Gateway Timeout:                        The server, acting as a gateway or proxy, did not receive a timely response form the upstream server.
  *
  */
-
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Create User
 const createUser = async (req: Request, res: Response) => {
@@ -174,36 +173,17 @@ const sendMagicLink = async (req: Request, res: Response) => {
     const magicLink = `http://localhost:5000/onboarding?token=${token}`;
 
     // Send email with magic link
-    const { data, error } = await resend.emails.send({
-      from: "Acme <lasseisgay@resend.dev>",
-      to: [primaryEmailAddress],
-      subject: "Your Magic Link",
-      html: `<strong>Click the following link to complete your registration: <a href="${magicLink}">${magicLink}</a></strong>`,
+    const email = await emailService.sendEmail(
+      "Acme <lasseisgay@resend.dev>",
+      [primaryEmailAddress],
+      "Your Magic Link",
+      `<strong>Click the following link to complete your registration: <a href="${magicLink}">${magicLink}</a></strong>`
+    );
+
+    return res.status(200).json({
+      exists: false,
+      message: "Magic link sent. Please check your email.",
     });
-
-    if (error) {
-      await UsersModel.findOneAndDelete({
-        primaryEmailAddress: primaryEmailAddress,
-      });
-      await SessionModel.findOneAndDelete({ token: token });
-
-      return res
-        .status(200)
-        .json({
-          exists: true,
-          message: "That email doesnt exist.",
-          error: error.message,
-        });
-    }
-
-    console.log({ data });
-
-    return res
-      .status(200)
-      .json({
-        exists: false,
-        message: "Magic link sent. Please check your email.",
-      });
   } catch (error) {
     return res
       .status(500)
@@ -444,15 +424,12 @@ const register = async (req: Request, res: Response) => {
     newUser = await newUser.save();
 
     //Send a welcome email
-    const { data, error } = await resend.emails.send({
-      from: "Acme <onboarding@resend.dev>",
-      to: [newUser.primaryEmailAddress],
-      subject: "Welcome",
-      html: `<strong>
-      ${magicLink}
-      <br />
-      ${verificationToken}</strong>`,
-    });
+    const sendEmail = await emailService.sendEmail(
+      "Acme <onboarding@resend.dev>",
+      [newUser.primaryEmailAddress],
+      "Welcome",
+      `<strong> ${magicLink} <br />${verificationToken}</strong>`
+    );
 
     return res.status(200).json({
       success: true,
@@ -572,12 +549,10 @@ const forgotPassword = async (req: Request, res: Response) => {
 
     const user = await UsersModel.findOne({ primaryEmailAddress: email });
     if (!user) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "No user found with that email address.",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "No user found with that email address.",
+      });
     }
 
     //Generate a reset token
@@ -592,15 +567,12 @@ const forgotPassword = async (req: Request, res: Response) => {
     //Send reset email
     const resetUrl = `http://${req.headers.host}/reset/${token}`;
     //email
-    const { data, error } = await resend.emails.send({
-      from: "Acme <lasseisgay@resend.dev>",
-      to: [email],
-      subject: "Your Magic Link",
-      html: `<strong>${resetUrl}<a href="#">test</a></strong>`,
-    });
-    if (error) {
-      return res.status(400).json(error);
-    }
+    const sendEmail = await emailService.sendEmail(
+      "Acme <lasseisgay@resend.dev>",
+      [email],
+      "Your Magic Link",
+      `<strong>${resetUrl}<a href="#">test</a></strong>`
+    );
 
     return res
       .status(200)
@@ -625,12 +597,10 @@ const resetPassword = async (req: Request, res: Response) => {
     });
 
     if (!user) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Password reset token is invalid or has expired.",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Password reset token is invalid or has expired.",
+      });
     }
 
     //Hash the new password
@@ -644,15 +614,12 @@ const resetPassword = async (req: Request, res: Response) => {
     await user.save();
 
     //email
-    const { data, error } = await resend.emails.send({
-      from: "Acme <lasseisgay@resend.dev>",
-      to: [user.primaryEmailAddress],
-      subject: "Your Magic Link",
-      html: `<strong>Your password has been updated</strong>`,
-    });
-    if (error) {
-      return res.status(400).json(error);
-    }
+    const sendEmail = await emailService.sendEmail(
+      "Acme <lasseisgay@resend.dev>",
+      [user.primaryEmailAddress],
+      "Your Magic Link",
+      `<strong>Your password has been updated</strong>`
+    );
 
     return res
       .status(200)
