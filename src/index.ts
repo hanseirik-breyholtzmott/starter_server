@@ -26,7 +26,9 @@ import shareRoutes from "./router/shareRoutes";
 import router from "./router";
 
 const app = express();
-const PORT = 5000;
+const SERVER_PORT = process.env.SERVER_PORT
+  ? Number(process.env.SERVER_PORT)
+  : 5000;
 
 app.use(
   cors({
@@ -78,6 +80,6 @@ mongoose
   });
 
 const server = http.createServer(app);
-server.listen(PORT, () => {
-  console.log(`Server running on port: http://localhost:${PORT}`);
+server.listen(SERVER_PORT, () => {
+  console.log(`Server running on port: http://localhost:${SERVER_PORT}`);
 });
