@@ -4,7 +4,7 @@ dotenv.config();
 
 const MONGODB_USERNAME = process.env.MONGODB_USERNAME;
 const MONGODB_PASSWORD = process.env.MONGODB_PASSWORD;
-const MONGO_URL = `mongodb+srv://${MONGODB_USERNAME}:${MONGODB_PASSWORD}@starter.pvks7hh.mongodb.net/`;
+const MONGO_URL = process.env.MONGODB_URL;
 
 const SERVER_PORT = process.env.SERVER_PORT
   ? Number(process.env.SERVER_PORT)
