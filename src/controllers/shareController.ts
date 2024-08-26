@@ -1,21 +1,17 @@
 import { Request, Response, NextFunction, response } from "express";
-import UsersModel from "../models/users.model";
-import SharesModel from "../models/shares.model";
-import SessionModel from "../models/session.model";
-import jwt from "jsonwebtoken";
-import { config } from "../config";
-import { Resend } from "resend";
-
-import bcrypt from "bcrypt";
-import usersModel from "../models/users.model";
-
-//Types
-import { JwtPayload } from "../types/authTypes";
 
 //Services
 import userService from "../service/userService";
 import notificationService from "../service/notificationService";
 import emailService from "../service/emailService";
+import errorService from "../service/errorService";
+
+//Models
+import UsersModel from "../models/users.model";
+import SharesModel from "../models/shares.model";
+
+//Types
+import { JwtPayload } from "../types/authTypes";
 
 export const purchaseShares = async (req: Request, res: Response) => {
   const { userId, numberOfShares, purchasePrice } = req.body;
@@ -69,7 +65,7 @@ export const purchaseShares = async (req: Request, res: Response) => {
       .status(200)
       .json({ success: true, message: "You have bought stocks" });
   } catch (error) {
-    console.log(error);
+    errorService.handleServerError(res, error, "Server error");
   }
 };
 
@@ -104,10 +100,7 @@ export const totalSharesByUserId = async (req: Request, res: Response) => {
       totalInvested: totalInvested,
     });
   } catch (error) {
-    return res.status(400).json({
-      success: true,
-      message: "Server error: " + error,
-    });
+    errorService.handleServerError(res, error, "Server error");
   }
 };
 

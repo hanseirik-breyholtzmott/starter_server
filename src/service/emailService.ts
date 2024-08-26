@@ -1,5 +1,8 @@
 import { Resend } from "resend";
 
+//Service
+import errorService from "./errorService";
+
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const sendEmail = async (

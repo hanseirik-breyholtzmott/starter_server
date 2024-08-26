@@ -1,3 +1,4 @@
+import { userLogger } from "../logs";
 import bcrypt from "bcrypt";
 
 //Models
@@ -21,7 +22,7 @@ const createUser = async (user: IUser): Promise<IUserModel | boolean> => {
     var newUser = new UsersModel(user);
 
     await newUser.save();
-
+    userLogger.info;
     return newUser;
   } catch (error) {
     console.error("Error trying to create a user:", error);

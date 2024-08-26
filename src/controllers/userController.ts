@@ -1,15 +1,6 @@
-import { Request, Response, NextFunction, response } from "express";
-import UsersModel, { IUser } from "../models/users.model";
-import SessionModel from "../models/session.model";
+import { Request, Response } from "express";
 import jwt from "jsonwebtoken";
-import { config } from "../config";
-import { Resend } from "resend";
-
 import bcrypt from "bcrypt";
-import usersModel from "../models/users.model";
-
-//Types
-import { JwtPayload } from "../types/authTypes";
 
 //Services
 import userService from "../service/userService";
@@ -17,71 +8,53 @@ import tokenService from "../service/tokenService";
 import sessionService from "../service/sessionService";
 import notificationService from "../service/notificationService";
 import emailService from "../service/emailService";
+import errorService from "../service/errorService";
 
-/*
- *
- * Informatiional responses (100 - 199)
- *    - 100 Continue:                               The server has received the initial part of request, and the client should continue with rest of the request.
- *    - 101 Switching Protocols:                    The server understands the request to switch protocols and is willing to comply
- *    - 102 Processing (WebDAV):                    The server is processiong the request but hasn't completed it yet.
- * Successful responses     (200 - 299)
- *    - 200 OK:                                     The request has succeeded. The meaning of the success depends on the HTTP method (GET, POST, etc)
- *    - 201 Created:                                The requested has been fulfilled, leading to the creation of a new resource.
- *    - 202 Accepted:                               The request has been accepted for processing, but the processing is not yet complete.
- *    - 204 No Content:                             The server successfully processed the request, but there's no content to return.
- * Redirection messages     (300 - 399)
- *    - 301 Moved Premanently:                      The requested resource has been permanently moved to a new URL.
- *    - 302 Found (Previously "Moved Temporarily"): The requested resource resides temporarily under a different URL.
- *    - 304 Not Modified:                           The resource has not been modified since the last request, so the client can use the cached version.
- *    - 307 Temporary Redirect:                     The request should be repeated with another URL, but future requests should still use the orginial URL.
- * Client error responses   (400 - 499)
- *    - 400 Bad Request:                            The server cannot process the request due to a client error (e.g. malformed request syntax).
- *    - 401 Unautherized:                           Authentication is required, and the client must authenticate itself to get the requested response.
- *    - 403 Forbidden:                              The server understands teh request but refuses to authorize it.
- *    - 404 Not Found:                              The requested resource could not be found on the server.
- *    - 405 Method Not Allowed:                     The method specified in the request is not allowed for the resource identified by the URL.
- * Server error responses   (500 - 599)
- *    - 500 Internal Server Error:                  The server encounted an unexpected condition that prevented it from fulfilling the request.
- *    - 501 Not Implemented:                        The server does not support the functionality required to fulfill the request.
- *    - 502 Bad Gateway:                            The server, while acting as a gateway or proxy, receicved an invaldi response form an upstream server.
- *    - 503 Service Unavailable:                    The server is not ready to handle the request, usually due to being overloaded or down for maintenance.
- *    - 504 Gateway Timeout:                        The server, acting as a gateway or proxy, did not receive a timely response form the upstream server.
- *
- */
+//Models
+import UsersModel, { IUser } from "../models/users.model";
+import SessionModel from "../models/session.model";
 
-// Create User
+//Types
+import { JwtPayload } from "../types/authTypes";
+
+//Logger
+import { userLogger } from "../logs";
+
+/** Controller */
+
 const createUser = async (req: Request, res: Response) => {
   const { firstName, lastName, email, password, ssn, address } = req.body;
 
   try {
-    //check if email is already taken
-    const isEmailTaken = await userService.emailExists(email);
+    const [isEmailTaken, isSsnTaken] = await Promise.all([
+      userService.emailExists(email),
+      userService.ssnExists(ssn),
+    ]);
 
     if (isEmailTaken) {
-      return res.status(400).json({
-        success: false,
-        message: "Email is already in the use.",
-        error: {
-          code: 400,
-          details:
-            "The email address provided is already associated with another account.",
-        },
+      userLogger.warn("Email is already in use.", {
+        email: email,
+        user: req.body,
       });
+      return errorService.handleClientError(
+        res,
+        400,
+        "Email is already in use.",
+        "The email address provided is already associated with another account."
+      );
     }
 
-    //check if the SSN is already taken
-    const isSsnTaken = await userService.ssnExists(ssn);
-
     if (isSsnTaken) {
-      return res.status(400).json({
-        success: false,
-        message: "There is an account already with your SSN.",
-        error: {
-          code: 400,
-          details:
-            "The ssn provided is already associated with another account.",
-        },
+      userLogger.warn("There is an account already with your SSN.", {
+        email: email,
+        user: req.body,
       });
+      return errorService.handleClientError(
+        res,
+        400,
+        "There is an account already with your SSN.",
+        "The ssn provided is already associated with another account."
+      );
     }
 
     //Hash the password before saving
@@ -109,13 +82,19 @@ const createUser = async (req: Request, res: Response) => {
 
     await newUser.save();
 
+    //Log that a user has been created
+    userLogger.info("User created successfully", {
+      userId: newUser.user_id,
+      email: newUser.primaryEmailAddress,
+    });
+
     return res.status(200).json({
       success: true,
       message: "User created successfully",
       user: newUser,
     });
   } catch (error) {
-    res.status(400).json({ message: "Error creating user", error });
+    errorService.handleServerError(res, error, "Error fetching user");
   }
 };
 
@@ -123,71 +102,15 @@ const createUser = async (req: Request, res: Response) => {
 const getUser = async (req: Request, res: Response) => {
   try {
     const user = await UsersModel.findOne({ user_id: req.params.id });
+
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-    res.status(200).json(user);
-  } catch (error) {
-    res.status(400).json({ message: "Error fetching user", error });
-  }
-};
-
-const sendMagicLink = async (req: Request, res: Response) => {
-  console.log(req.body);
-  const { primaryEmailAddress } = req.body;
-
-  try {
-    // Check if the user already exists
-    let user = await UsersModel.findOne({
-      primaryEmailAddress: primaryEmailAddress,
-    });
-
-    if (user) {
-      return res
-        .status(200)
-        .json({ exists: true, message: "Email already in use." });
+      userLogger.warn("The user was not found", { userId: req.params.id });
+      return errorService.handleClientError(res, 400, "The user was not found");
     }
 
-    // Create a new User
-    const newUser = new UsersModel({
-      primaryEmailAddress: primaryEmailAddress,
-      emailAddresses: [{ primaryEmailAddress }], // Correctly use an array for emailAddresses
-    });
-    await newUser.save();
-
-    // Generate a session token
-    const token = jwt.sign(
-      { userId: newUser._id },
-      process.env.JWT_SECRET_KEY,
-      { expiresIn: "1h" }
-    );
-
-    // Store session token in the database
-    await SessionModel.create({
-      userId: newUser.user_id,
-      token: token,
-      expiresAt: new Date(Date.now() + 60 * 60 * 1000), // Set token expiration time
-    });
-
-    // Create magic link
-    const magicLink = `http://localhost:5000/onboarding?token=${token}`;
-
-    // Send email with magic link
-    const email = await emailService.sendEmail(
-      "Acme <lasseisgay@resend.dev>",
-      [primaryEmailAddress],
-      "Your Magic Link",
-      `<strong>Click the following link to complete your registration: <a href="${magicLink}">${magicLink}</a></strong>`
-    );
-
-    return res.status(200).json({
-      exists: false,
-      message: "Magic link sent. Please check your email.",
-    });
+    return res.status(200).json(user);
   } catch (error) {
-    return res
-      .status(500)
-      .json({ message: "Server error", error: error.message });
+    errorService.handleServerError(res, error, "Error fetching user");
   }
 };
 
@@ -202,10 +125,12 @@ const verifyEmail = async (req: Request, res: Response) => {
 
     //Verification does not exist
     if (!user) {
-      return res.status(400).json({
-        success: false,
-        message: "Verification code is invalid.",
-      });
+      userLogger.warn("Verification code is invalid.");
+      return errorService.handleClientError(
+        res,
+        400,
+        "Verification code is invalid."
+      );
     }
 
     const currentDate = new Date();
@@ -215,10 +140,11 @@ const verifyEmail = async (req: Request, res: Response) => {
       user.verificationTokenExpiresAt < currentDate
     ) {
       // Verification code has expired
-      return res.status(400).json({
-        success: false,
-        message: "Verification code expired, please request a new one.",
-      });
+      return errorService.handleClientError(
+        res,
+        400,
+        "Verification code expired, please request a new one."
+      );
     }
 
     // Email is verified
@@ -247,8 +173,7 @@ const verifyEmail = async (req: Request, res: Response) => {
       refreshToken: refreshToken,
     });
   } catch (error) {
-    console.error("Error verifying token:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    errorService.handleServerError(res, error, "Server error verifying email");
   }
 };
 
@@ -260,13 +185,11 @@ const login = async (req: Request, res: Response) => {
     const doesEmailExist = await userService.emailExists(email);
 
     if (!doesEmailExist) {
-      return res.status(400).json({
-        emailTaken: false,
-        message: "Invalid email or password.",
-        user: null,
-        token: null,
-        error: true,
-      });
+      return errorService.handleClientError(
+        res,
+        400,
+        "Invalid email or password."
+      );
     }
 
     //If email exists, retrieve the user
@@ -279,12 +202,11 @@ const login = async (req: Request, res: Response) => {
     );
 
     if (!isPasswordValid) {
-      return res.status(400).json({
-        message: "The password you entered is incorrect. Please try again.",
-        user: null,
-        token: null,
-        error: true,
-      });
+      return errorService.handleClientError(
+        res,
+        400,
+        "The password you entered is incorrect. Please try again."
+      );
     }
 
     //Find session, if it exists
@@ -371,8 +293,7 @@ const login = async (req: Request, res: Response) => {
       });
     }
   } catch (error) {
-    console.error("Login error:", error);
-    res.status(500).json({ message: "Server error" });
+    errorService.handleServerError(res, error, "Server error");
   }
 };
 
@@ -384,13 +305,11 @@ const register = async (req: Request, res: Response) => {
     const isEmailTaken = await userService.emailExists(email);
 
     if (isEmailTaken) {
-      return res.status(400).json({
-        success: false,
-        message: "Email already exists try to login into it.",
-        emailTaken: true,
-        user: null,
-        token: null,
-      });
+      return errorService.handleClientError(
+        res,
+        400,
+        "Email already exists try to login into it."
+      );
     }
 
     //Hash the password before saving
@@ -442,7 +361,7 @@ const register = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.log(error);
+    errorService.handleServerError(res, error, "Server error");
   }
 };
 
@@ -450,12 +369,7 @@ const refreshToken = async (req: Request, res: Response) => {
   const { refreshToken } = req.body;
 
   if (!refreshToken) {
-    return res.status(200).json({
-      message: "No session",
-      accessToken: null,
-      refreshToken: null,
-      user: null,
-    });
+    return errorService.handleClientError(res, 400, "No session was found.");
   }
 
   try {
@@ -463,15 +377,11 @@ const refreshToken = async (req: Request, res: Response) => {
       refreshToken,
       process.env.JWT_SECRET_KEY
     ) as JwtPayload;
+
     const user = await UsersModel.findOne({ user_id: decoded.id });
 
     if (!user) {
-      return res.status(200).json({
-        message: "No user",
-        accessToken: null,
-        refreshToken: null,
-        user: null,
-      });
+      return errorService.handleClientError(res, 400, "User was not found.");
     }
 
     //Generate new tokens
@@ -503,8 +413,8 @@ const refreshToken = async (req: Request, res: Response) => {
         lastName: user.lastName,
       },
     });
-  } catch (err) {
-    res.sendStatus(403);
+  } catch (error) {
+    errorService.handleServerError(res, error, "Server error");
   }
 };
 
@@ -537,7 +447,7 @@ const bulkCreateUsers = async (req: Request, res: Response) => {
       createdUsers.push(newUser);
     }
   } catch (error) {
-    console.log(error);
+    errorService.handleServerError(res, error, "Server error");
   }
 };
 
@@ -549,10 +459,12 @@ const forgotPassword = async (req: Request, res: Response) => {
 
     const user = await UsersModel.findOne({ primaryEmailAddress: email });
     if (!user) {
-      return res.status(400).json({
-        success: false,
-        message: "No user found with that email address.",
-      });
+      return errorService.handleClientError(
+        res,
+        400,
+        "Email is already in the use.",
+        "The email address provided is already associated with another account."
+      );
     }
 
     //Generate a reset token
@@ -578,10 +490,7 @@ const forgotPassword = async (req: Request, res: Response) => {
       .status(200)
       .json({ success: true, message: "Password reset email sent." });
   } catch (error) {
-    console.log("Error in forgotPassword:", error);
-    return res
-      .status(500)
-      .json({ sucess: false, message: "Error processing request" });
+    errorService.handleServerError(res, error, "Server error");
   }
 };
 
@@ -597,10 +506,11 @@ const resetPassword = async (req: Request, res: Response) => {
     });
 
     if (!user) {
-      return res.status(400).json({
-        success: false,
-        message: "Password reset token is invalid or has expired.",
-      });
+      return errorService.handleClientError(
+        res,
+        400,
+        "Password reset token is invalid or has expired."
+      );
     }
 
     //Hash the new password
@@ -625,8 +535,7 @@ const resetPassword = async (req: Request, res: Response) => {
       .status(200)
       .json({ success: true, message: "Password has been reset." });
   } catch (error) {
-    console.error("Error in resetPassword:", error);
-    return res.status(500).json({ message: "Error" });
+    errorService.handleServerError(res, error, "Server error");
   }
 };
 
@@ -656,8 +565,7 @@ const getNotifications = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error("Error retrieving notificationas by user id:", error);
-    throw new Error("Failed retrieving notifications by user id.");
+    errorService.handleServerError(res, error, "Server error");
   }
 };
 
