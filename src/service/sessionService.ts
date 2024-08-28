@@ -35,7 +35,20 @@ const findSession = async (
   }
 };
 
+const findSessionByToken = async (
+  token: string
+): Promise<ISessionModel | null> => {
+  try {
+    const session = await sessionModel.findOne({ token: token });
+    return session;
+  } catch (error) {
+    console.error("Error finding session:", error);
+    throw new Error("Error finding session.");
+  }
+};
+
 export default {
   createSession,
   findSession,
+  findSessionByToken,
 };

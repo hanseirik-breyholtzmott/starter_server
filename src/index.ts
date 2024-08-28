@@ -65,7 +65,9 @@ app.use("/", shareRoutes);
 
 // Healthcheck Route
 app.get("/healthcheck", (req, res) => {
-  res.send("Server is healthy");
+  const userCookie = req.cookies["session"];
+  console.log(userCookie);
+  res.send(userCookie);
 });
 
 // Connect to MongoDB using Mongoose

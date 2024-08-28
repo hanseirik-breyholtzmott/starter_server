@@ -234,6 +234,7 @@ const login = async (req: Request, res: Response) => {
 
         // Send the new token
         return res.status(200).json({
+          success: true,
           message: "Success",
           accessToken: accessToken,
           refreshToken: newRefreshToken,
@@ -253,6 +254,7 @@ const login = async (req: Request, res: Response) => {
         );
 
         return res.status(200).json({
+          success: true,
           message: "Success",
           accessToken: accessToken,
           refreshToken: refreshToken.token,
@@ -281,6 +283,7 @@ const login = async (req: Request, res: Response) => {
 
       // Send the new token
       return res.status(200).json({
+        success: true,
         message: "Success",
         accessToken: accessToken,
         refreshToken: session.token,
@@ -366,46 +369,55 @@ const register = async (req: Request, res: Response) => {
 };
 
 const refreshToken = async (req: Request, res: Response) => {
-  const { refreshToken } = req.body;
+  const refreshToken = req.body.refreshToken || req.cookies["session"];
+  console.log(refreshToken);
 
   if (!refreshToken) {
     return errorService.handleClientError(res, 400, "No session was found.");
   }
 
   try {
-    const decoded = jwt.verify(
-      refreshToken,
-      process.env.JWT_SECRET_KEY
-    ) as JwtPayload;
+    const session = await sessionService.findSessionByToken(refreshToken);
 
-    const user = await UsersModel.findOne({ user_id: decoded.id });
-
-    if (!user) {
-      return errorService.handleClientError(res, 400, "User was not found.");
+    if (!session) {
+      return errorService.handleClientError(
+        res,
+        400,
+        "Invalid session or token."
+      );
     }
 
-    //Generate new tokens
+    // Check if the session is expired
+    const currentTime = Date.now();
+    if (session.expiresAt && currentTime > session.expiresAt.getTime()) {
+      return res.status(200).json({
+        success: false,
+        message: "Session has expired.",
+      });
+    }
+
+    const user = await userService.getUserByUserId(session.userId);
+
+    if (!user) {
+      return errorService.handleClientError(
+        res,
+        400,
+        "User was not found.",
+        `UserId is ${session.userId}`
+      );
+    }
+
+    // Generate new access and refresh tokens
     const newAccessToken = jwt.sign(
-      { sub: user.id },
+      { sub: user.user_id },
       process.env.ACCESS_TOKEN_SECRET,
       { expiresIn: "15m" }
     );
-    const newRefreshToken = jwt.sign(
-      { sub: user.id },
-      process.env.JWT_SECRET_KEY,
-      { expiresIn: "14d" }
-    );
-
-    //Save new refresh token in DB and remove the old one
-    await SessionModel.findOneAndReplace(
-      { token: refreshToken },
-      { userId: user.user_id, token: newRefreshToken }
-    );
 
     return res.status(200).json({
+      success: true,
       message: "Success",
       accessToken: newAccessToken,
-      refreshToken: newRefreshToken,
       user: {
         id: user.user_id,
         email: user.primaryEmailAddress,
