@@ -1,5 +1,5 @@
-import mongoose, { Document, Schema } from 'mongoose';
-import { v4 as uuidv4 } from 'uuid'; // Assuming you're using UUIDs for unique IDs
+import mongoose, { Document, Schema } from "mongoose";
+import { v4 as uuidv4 } from "uuid"; // Assuming you're using UUIDs for unique IDs
 
 //Define the IAddress interface
 export interface IAddress {
@@ -27,15 +27,17 @@ export interface IUser {
   primaryPhoneNumber: any | null;
   phoneNumbers: Array<any>;
   hasVerifiedPhoneNumber: boolean;
-  hasVerifiedPrimaryEmailAddress: boolean; 
+  hasVerifiedPrimaryEmailAddress: boolean;
   passwordEnabled: boolean;
-  password: string; 
+  password: string;
   resetPasswordToken: string | null;
   resetPasswordExpiresAt: Date | null;
   verificationToken: string | null;
   verificationTokenExpiresAt: Date | null;
   deleteSelfEnabled: boolean;
   stripeCustomerId: string | null; // Stripe customer ID
+  roles: string;
+  permissions: Array<string>;
   lastSignInAt: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -62,32 +64,38 @@ const UsersSchema = new Schema({
   username: { type: String, default: null },
   hasImage: { type: Boolean, default: false },
   imageUrl: { type: String, default: null },
-  address: { type: AddressSchema, default: null},
+  address: { type: AddressSchema, default: null },
   primaryEmailAddress: { type: String, unique: true, default: null },
   emailAddresses: { type: [Schema.Types.Mixed], default: [] },
   primaryPhoneNumber: { type: Schema.Types.Mixed, default: null },
   phoneNumbers: { type: [Schema.Types.Mixed], default: [] },
   hasVerifiedPhoneNumber: { type: Boolean, default: false },
-  hasVerifiedPrimaryEmailAddress: { type: Boolean, default: false }, 
+  hasVerifiedPrimaryEmailAddress: { type: Boolean, default: false },
   passwordEnabled: { type: Boolean, default: false },
   password: { type: String, required: true },
-  resetPasswordToken: { type: String, default: null},
+  resetPasswordToken: { type: String, default: null },
   resetPasswordExpiresAt: { type: Date, default: null },
   verificationTokenExpiresAt: { type: Date, default: null },
   verificationToken: { type: String, default: null },
   deleteSelfEnabled: { type: Boolean, default: false },
   stripeCustomerId: { type: String, default: null },
+  roles: {
+    type: String,
+    enum: ["admin", "user", "moderator"],
+    default: "user",
+  },
+  permissions: { type: [String], default: [] },
   lastSignInAt: { type: Date, default: Date.now },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 });
 
 // Pre-save hook to ensure the id is set
-UsersSchema.pre('save', function (next) {
+UsersSchema.pre("save", function (next) {
   if (!this.id) {
     this.id = uuidv4();
   }
   next();
 });
 
-export default mongoose.model<IUserModel>('Users', UsersSchema);
+export default mongoose.model<IUserModel>("Users", UsersSchema);

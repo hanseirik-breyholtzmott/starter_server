@@ -5,6 +5,7 @@ import userService from "../service/userService";
 import notificationService from "../service/notificationService";
 import emailService from "../service/emailService";
 import errorService from "../service/errorService";
+import shareService from "../service/shareService";
 
 //Models
 import UsersModel from "../models/users.model";
@@ -13,7 +14,7 @@ import SharesModel from "../models/shares.model";
 //Types
 import { JwtPayload } from "../types/authTypes";
 
-export const purchaseShares = async (req: Request, res: Response) => {
+const purchaseShares = async (req: Request, res: Response) => {
   const { userId, numberOfShares, purchasePrice } = req.body;
 
   try {
@@ -69,7 +70,7 @@ export const purchaseShares = async (req: Request, res: Response) => {
   }
 };
 
-export const totalSharesByUserId = async (req: Request, res: Response) => {
+const totalSharesByUserId = async (req: Request, res: Response) => {
   const userId = req.params.userId;
 
   try {
@@ -104,4 +105,56 @@ export const totalSharesByUserId = async (req: Request, res: Response) => {
   }
 };
 
-export default { purchaseShares, totalSharesByUserId };
+const campaginInfo = async (req: Request, res: Response) => {
+  /*const { userId } = req.body;
+
+  const user = await userService.getUserByUserId(userId);
+
+  if (!user) {
+    return res.status(400).json({
+      success: false,
+      message: "User not found.",
+    });
+  }*/
+
+  const userId = req.params.userId;
+
+  try {
+    //Find user based on ID
+    const user = await userService.getUserByUserId(userId);
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "User not found.",
+      });
+    }
+
+    const convertedLoanAmount = 2344625.2;
+    const convertedLoanShares = 0;
+    const convertedLoanPurchase = 0;
+
+    const totalShares = await shareService.countTotalSharesIn2024();
+
+    const totalSharesByUser = await shareService.countSharesByUserId(userId);
+
+    const countPurchases = await shareService.countPurcahsesAfter2023();
+
+    return res.status(200).json({
+      user: {
+        totalShares: totalSharesByUser,
+      },
+      data: {
+        totalShares: totalShares + convertedLoanShares,
+        totalAmount: totalShares * 8 + convertedLoanAmount,
+        totalPurchases: countPurchases,
+        closingDate: null,
+        goal: ((totalShares * 8 + convertedLoanAmount) / 8000000).toFixed(2),
+      },
+    });
+  } catch (error) {
+    errorService.handleServerError(res, error, "Server error");
+  }
+};
+
+export default { purchaseShares, totalSharesByUserId, campaginInfo };

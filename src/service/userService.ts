@@ -1,4 +1,4 @@
-import { userLogger } from "../logs";
+import { userLogger } from "../logger";
 import bcrypt from "bcrypt";
 
 //Models

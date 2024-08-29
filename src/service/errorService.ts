@@ -1,4 +1,4 @@
-import { userLogger, dbLogger, middlewareLogger } from "../logs";
+import { userLogger, dbLogger, middlewareLogger } from "../logger";
 import { Response } from "express";
 
 class errorService {

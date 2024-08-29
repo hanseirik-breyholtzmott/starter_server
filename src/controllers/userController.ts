@@ -18,7 +18,7 @@ import SessionModel from "../models/session.model";
 import { JwtPayload } from "../types/authTypes";
 
 //Logger
-import { userLogger } from "../logs";
+import { userLogger } from "../logger";
 
 /** Controller */
 
