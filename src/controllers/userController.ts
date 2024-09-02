@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
+import fs from "fs";
+import path from "path";
 
 //Services
 import userService from "../service/userService";
@@ -346,11 +348,86 @@ const register = async (req: Request, res: Response) => {
     newUser = await newUser.save();
 
     //Send a welcome email
+
+    const templatePath = path.join();
+
     const sendEmail = await emailService.sendEmail(
       "Acme <onboarding@resend.dev>",
       [newUser.primaryEmailAddress],
       "Welcome",
-      `<strong> ${magicLink} <br />${verificationToken}</strong>`
+      `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+      <html dir="ltr" lang="en">
+        <head>
+          <meta content="text/html; charset=UTF-8" http-equiv="Content-Type" />
+          <meta name="x-apple-disable-message-reformatting" />
+          <!--$-->
+        </head>
+        <div
+          style="
+            display: none;
+            overflow: hidden;
+            line-height: 1px;
+            opacity: 0;
+            max-height: 0;
+            max-width: 0;
+          "
+        >
+          Log in with this magic link
+        </div>
+
+        <body style="background-color: #ffffff">
+          <table
+            align="center"
+            width="100%"
+            border="0"
+            cellpadding="0"
+            cellspacing="0"
+            role="presentation"
+            style="
+              max-width: 37.5em;
+              padding-left: 12px;
+              padding-right: 12px;
+              margin: 0 auto;
+            "
+          >
+            <tbody>
+              <tr style="width: 100%">
+                <td>
+                  <h1
+                    style="color:#333;font-family:-apple-system, BlinkMacSystemFont, &#x27;Segoe UI&#x27;, &#x27;Roboto&#x27;, &#x27;Oxygen&#x27;, &#x27;Ubuntu&#x27;, &#x27;Cantarell&#x27;, &#x27;Fira Sans&#x27;, &#x27;Droid Sans&#x27;, &#x27;Helvetica Neue&#x27;, sans-serif;font-size:24px;font-weight:bold;margin:40px 0;padding:0"
+                  >
+                    Login
+                  </h1>
+                  <a
+                    href="${magicLink}"
+                    style="color:#2754C5;text-decoration:underline;font-family:-apple-system, BlinkMacSystemFont, &#x27;Segoe UI&#x27;, &#x27;Roboto&#x27;, &#x27;Oxygen&#x27;, &#x27;Ubuntu&#x27;, &#x27;Cantarell&#x27;, &#x27;Fira Sans&#x27;, &#x27;Droid Sans&#x27;, &#x27;Helvetica Neue&#x27;, sans-serif;font-size:14px;display:block;margin-bottom:16px"
+                    target="_blank"
+                    >Click here to log in with this magic link</a
+                  >
+                  <p
+                    style="font-size:14px;line-height:24px;margin:24px 0;color:#333;font-family:-apple-system, BlinkMacSystemFont, &#x27;Segoe UI&#x27;, &#x27;Roboto&#x27;, &#x27;Oxygen&#x27;, &#x27;Ubuntu&#x27;, &#x27;Cantarell&#x27;, &#x27;Fira Sans&#x27;, &#x27;Droid Sans&#x27;, &#x27;Helvetica Neue&#x27;, sans-serif;margin-bottom:14px"
+                  >
+                    Or, copy and paste this temporary login code:
+                  </p>
+                  <code
+                    style="
+                      display: inline-block;
+                      padding: 16px 4.5%;
+                      width: 90.5%;
+                      background-color: #f4f4f4;
+                      border-radius: 5px;
+                      border: 1px solid #eee;
+                      color: #333;
+                    "
+                    >${verificationToken}</code
+                  >
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <!--/$-->
+        </body>
+      </html>`
     );
 
     return res.status(200).json({
@@ -492,10 +569,65 @@ const forgotPassword = async (req: Request, res: Response) => {
     const resetUrl = `http://${req.headers.host}/reset/${token}`;
     //email
     const sendEmail = await emailService.sendEmail(
-      "Acme <lasseisgay@resend.dev>",
+      "Acme <folkekraft@resend.dev>",
       [email],
-      "Your Magic Link",
-      `<strong>${resetUrl}<a href="#">test</a></strong>`
+      "Reset Password",
+      `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+      <html dir="ltr" lang="en">
+        <head>
+          <meta content="text/html; charset=UTF-8" http-equiv="Content-Type" />
+          <meta name="x-apple-disable-message-reformatting" />
+          <!--$-->
+        </head>
+        <div
+          style="
+            display: none;
+            overflow: hidden;
+            line-height: 1px;
+            opacity: 0;
+            max-height: 0;
+            max-width: 0;
+          "
+        >
+          Log in with this magic link
+        </div>
+
+        <body style="background-color: #ffffff">
+          <table
+            align="center"
+            width="100%"
+            border="0"
+            cellpadding="0"
+            cellspacing="0"
+            role="presentation"
+            style="
+              max-width: 37.5em;
+              padding-left: 12px;
+              padding-right: 12px;
+              margin: 0 auto;
+            "
+          >
+            <tbody>
+              <tr style="width: 100%">
+                <td>
+                  <h1
+                    style="color:#333;font-family:-apple-system, BlinkMacSystemFont, &#x27;Segoe UI&#x27;, &#x27;Roboto&#x27;, &#x27;Oxygen&#x27;, &#x27;Ubuntu&#x27;, &#x27;Cantarell&#x27;, &#x27;Fira Sans&#x27;, &#x27;Droid Sans&#x27;, &#x27;Helvetica Neue&#x27;, sans-serif;font-size:24px;font-weight:bold;margin:40px 0;padding:0"
+                  >
+                    Reset Password
+                  </h1>
+                  <a
+                    href="${resetUrl}"
+                    style="color:#2754C5;text-decoration:underline;font-family:-apple-system, BlinkMacSystemFont, &#x27;Segoe UI&#x27;, &#x27;Roboto&#x27;, &#x27;Oxygen&#x27;, &#x27;Ubuntu&#x27;, &#x27;Cantarell&#x27;, &#x27;Fira Sans&#x27;, &#x27;Droid Sans&#x27;, &#x27;Helvetica Neue&#x27;, sans-serif;font-size:14px;display:block;margin-bottom:16px"
+                    target="_blank"
+                    >Click here to reset your password with this magic link</a
+                  >
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <!--/$-->
+        </body>
+      </html>`
     );
 
     return res
@@ -539,8 +671,57 @@ const resetPassword = async (req: Request, res: Response) => {
     const sendEmail = await emailService.sendEmail(
       "Acme <lasseisgay@resend.dev>",
       [user.primaryEmailAddress],
-      "Your Magic Link",
-      `<strong>Your password has been updated</strong>`
+      "Your password has been updated",
+      `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+      <html dir="ltr" lang="en">
+        <head>
+          <meta content="text/html; charset=UTF-8" http-equiv="Content-Type" />
+          <meta name="x-apple-disable-message-reformatting" />
+          <!--$-->
+        </head>
+        <div
+          style="
+            display: none;
+            overflow: hidden;
+            line-height: 1px;
+            opacity: 0;
+            max-height: 0;
+            max-width: 0;
+          "
+        >
+          Log in with this magic link
+        </div>
+
+        <body style="background-color: #ffffff">
+          <table
+            align="center"
+            width="100%"
+            border="0"
+            cellpadding="0"
+            cellspacing="0"
+            role="presentation"
+            style="
+              max-width: 37.5em;
+              padding-left: 12px;
+              padding-right: 12px;
+              margin: 0 auto;
+            "
+          >
+            <tbody>
+              <tr style="width: 100%">
+                <td>
+                  <h1
+                    style="color:#333;font-family:-apple-system, BlinkMacSystemFont, &#x27;Segoe UI&#x27;, &#x27;Roboto&#x27;, &#x27;Oxygen&#x27;, &#x27;Ubuntu&#x27;, &#x27;Cantarell&#x27;, &#x27;Fira Sans&#x27;, &#x27;Droid Sans&#x27;, &#x27;Helvetica Neue&#x27;, sans-serif;font-size:24px;font-weight:bold;margin:40px 0;padding:0"
+                  >
+                    Your password has been updated.
+                  </h1>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <!--/$-->
+        </body>
+      </html>`
     );
 
     return res
