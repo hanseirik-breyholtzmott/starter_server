@@ -15,7 +15,7 @@ import SharesModel from "../models/shares.model";
 import { JwtPayload } from "../types/authTypes";
 
 const purchaseShares = async (req: Request, res: Response) => {
-  const { userId, numberOfShares, purchasePrice } = req.body;
+  const { userId, numberOfShares, purchasePrice, ssn } = req.body;
 
   try {
     //Check if the user exists
@@ -40,9 +40,9 @@ const purchaseShares = async (req: Request, res: Response) => {
 
     // Send email with stock puchase
     const email = await emailService.sendEmail(
-      "Get rich quick <lasseisgay@resend.dev>",
+      "Folkekraft emisjon <folkekraft@resend.dev>",
       [user.primaryEmailAddress],
-      "You have purchased stocks.",
+      "Kvittering på tegning av Folkekraft aksjer",
       `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
         <html dir="ltr" lang="en">
           <head>
@@ -122,7 +122,7 @@ const purchaseShares = async (req: Request, res: Response) => {
                                         color: #888888;
                                       "
                                     >
-                                      Invoice
+                                      Kvittering
                                     </p>
                                   </td>
                                 </tr>
@@ -153,7 +153,7 @@ const purchaseShares = async (req: Request, res: Response) => {
                                 color: #111111;
                               "
                             >
-                              Du har kjøpt aksjer i Folkekraft
+                              Du har kjøpt aksjer i Folkekraft AS. Dette er en bekreftelse på tegning av aksjer, du må fremdeles huske å betale in riktig beløp.
                             </p>
                           </td>
                         </tr>
@@ -230,7 +230,7 @@ const purchaseShares = async (req: Request, res: Response) => {
                                                         color: rgb(102, 102, 102);
                                                       "
                                                     >
-                                                      Epost
+                                                      EPOST
                                                     </p>
                                                     <a
                                                       style="
@@ -279,7 +279,7 @@ const purchaseShares = async (req: Request, res: Response) => {
                                                         color: rgb(102, 102, 102);
                                                       "
                                                     >
-                                                      INVOICE DATE
+                                                      TEGNINGSDATO
                                                     </p>
                                                     <p
                                                       style="
@@ -334,7 +334,7 @@ const purchaseShares = async (req: Request, res: Response) => {
                                                         padding: 0;
                                                       "
                                                     >
-                                                      ML4F5L8522
+                                                      Emisjon ${ssn.slice(-5)}
                                                     </p>
                                                   </td>
                                                   <td
@@ -356,7 +356,7 @@ const purchaseShares = async (req: Request, res: Response) => {
                                                         color: rgb(102, 102, 102);
                                                       "
                                                     >
-                                                      BANK ACCOUNT
+                                                      BANKKONTO
                                                     </p>
                                                     <p
                                                       style="
@@ -397,7 +397,7 @@ const purchaseShares = async (req: Request, res: Response) => {
                                         color: rgb(102, 102, 102);
                                       "
                                     >
-                                      BILLED TO
+                                      TEGNET AV
                                     </p>
 
                                     <p
@@ -408,7 +408,7 @@ const purchaseShares = async (req: Request, res: Response) => {
                                         padding: 0;
                                       "
                                     >
-                                      {{NAME}}
+                                      ${user.firstName + user.lastName}
                                     </p>
                                     <p
                                       style="
@@ -418,17 +418,7 @@ const purchaseShares = async (req: Request, res: Response) => {
                                         padding: 0;
                                       "
                                     >
-                                      {{SSN}}
-                                    </p>
-                                    <p
-                                      style="
-                                        font-size: 12px;
-                                        line-height: 1.4;
-                                        margin: 0;
-                                        padding: 0;
-                                      "
-                                    >
-                                      {{ORGANISATION}}
+                                      ${ssn}
                                     </p>
                                   </td>
                                 </tr>
@@ -571,7 +561,7 @@ const purchaseShares = async (req: Request, res: Response) => {
                                         font-weight: 600;
                                       "
                                     >
-                                    ${numberOfShares * 8}
+                                    ${numberOfShares * 8} kr
                                     </p>
                                   </td>
                                 </tr>
@@ -651,7 +641,7 @@ const purchaseShares = async (req: Request, res: Response) => {
                                         text-align: right;
                                       "
                                     >
-                                      ${numberOfShares * 8}
+                                      ${numberOfShares * 8} kr
                                     </p>
                                   </td>
                                 </tr>
@@ -679,10 +669,32 @@ const purchaseShares = async (req: Request, res: Response) => {
                         margin-bottom: 16px;
                       "
                     >
-                      1. Lorem ipsum dolor sit amet consectetur adipisicing elit.
-                      Ducimus quaerat repellendus, totam est sapiente consectetur cumque
-                      commodi nostrum repudiandae quidem quae illum nisi distinctio
-                      assumenda incidunt facilis neque placeat reiciendis.
+                      Enhver investering i aksjer er beheftet med betydelig risiko. Dersom noen av risikofaktorene, inkludert de inntatt nedenfor skulle materialisere seg, vil det kunne ha en negativ innvirkning på selskapet, herunder dets nåværende og fremtidige virksomhet, resultat, likviditet og finansielle stilling for øvrig. Dette innebærer at verdien av aksjene kan reduseres, slik at investorer kan risikere å tape hele eller deler av investeringen. En investor bør ikke investere i aksjer dersom vedkommende ikke har råd til å tape hele investeringen. Risikofaktorene som er presentert under og i prospektet må anses å være særlig viktige, men gir ikke en uttømmende beskrivelse av det totale risikobildet.
+                      <br/>
+                      <br/>
+                      Økonomisk og finansiell risiko:<br/>
+                      Det er risiko for at salgsutviklingen ikke innfris og forsinkelser i utviklingsarbeid oppstår. Det kan forsinke vekst, tapte markedsandeler og negative resultater.
+                      <br/>
+                      <br/>
+                      Markedsrisiko:<br/>
+                      Det er en risiko for at vi ikke finner riktige samarbeidspartnere som kan bidra til å skalere salg av produkter og merkevare. Etableringsbarrierer og konkurransesituasjonen i markedet kan påvirke vekstplaner.
+                      <br/>
+                      <br/>
+                      Politisk risiko:<br/>
+                      Det er risiko for at politisk endringer og nye reguleringer i strømmarkedet vil kunne påvirke vekst og utviklingsmuligheter.
+                      <br/>
+                      <br/>
+                      Omdømmerisiko:<br/>
+                      Forretningsmodellen til Folkekraft er ny i Norge og kan medføre misforståelser. Negativ medieomtale kan medføre svekket omdømme som kan påvirke verdiutvikling.
+                      <br/>
+                      <br/>
+                      Porteføljerisiko:<br/>
+                      Folkekrafts eierskap i GreenPowerHub påvirker selskapsverdi. GreenPowerHun kan både øke og synke i verdi og det påvirker verdiutvikling i Folkekraft. Tross begrenset eksponering i GreenPowerHub, øker kompleksiteten for investorer i Folkekraft.
+                      <br/>
+                      <br/>
+                      Kredittrisiko:<br/>
+                      Det er en lav risiko at Folkekrafts leveringsavtale med Energi Salg Norge opphører og dette kan medføre utfordringer med oppgjør av kreditt.
+
                     </p>
                   </td>
                 </tr>
@@ -711,7 +723,10 @@ const purchaseShares = async (req: Request, res: Response) => {
 
     return res
       .status(200)
-      .json({ success: true, message: "You have bought stocks" });
+      .json({
+        success: true,
+        message: `Du har tegnet deg ${numberOfShares} aksjer i Folkekraft AS.`,
+      });
   } catch (error) {
     errorService.handleServerError(res, error, "Server error");
   }
