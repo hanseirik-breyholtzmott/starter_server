@@ -24,15 +24,17 @@ import authRoutes from "./router/authRoutes";
 import shareRoutes from "./router/shareRoutes";
 
 import router from "./router";
+import userService from "./service/userService";
 
 const app = express();
 const SERVER_PORT = process.env.SERVER_PORT
   ? Number(process.env.SERVER_PORT)
   : 5000;
+const SERVER_HOST = process.env.SERVER_HOST;
 
 app.use(
   cors({
-    origin: "http://localhost:3000", // Or '*' to allow all origins, though not recommended for security reasons
+    origin: process.env.CLIENT_BASE_URL, // Or '*' to allow all origins, though not recommended for security reasons
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // Specify allowed methods
     allowedHeaders: ["Content-Type", "Authorization"], // Specify allowed headers if necessary
     credentials: true, // If you're dealing with cookies or HTTP authentication
@@ -49,7 +51,7 @@ app.use("/", router());
 // Session middleware
 app.use(
   session({
-    secret: "your_secret_key", // Replace with your actual secret key
+    secret: process.env.JWT_SECRET_KEY, // Replace with your actual secret key
     resave: false,
     saveUninitialized: true,
   })
@@ -65,7 +67,7 @@ app.use("/", shareRoutes);
 
 // Healthcheck Route
 app.get("/healthcheck", (req, res) => {
-  res.send("you are healthy");
+  return res.send("you are healthy");
 });
 
 // Connect to MongoDB using Mongoose
@@ -81,5 +83,5 @@ mongoose
 
 const server = http.createServer(app);
 server.listen(SERVER_PORT, () => {
-  console.log(`Server running on port: http://localhost:${SERVER_PORT}`);
+  console.log(`Server running on port: ${SERVER_HOST}:${SERVER_PORT}`);
 });
