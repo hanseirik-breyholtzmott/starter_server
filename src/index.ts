@@ -32,12 +32,27 @@ const SERVER_PORT = process.env.SERVER_PORT
   : 5000;
 const SERVER_HOST = process.env.SERVER_HOST;
 
+const allowedOrigins = [
+  "http://localhost:3000", // Development
+  "https://invest.folkekraft.no", // Production
+];
+
 app.use(
   cors({
-    origin: process.env.CLIENT_BASE_URL, // Or '*' to allow all origins, though not recommended for security reasons
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // Specify allowed methods
-    allowedHeaders: ["Content-Type", "Authorization"], // Specify allowed headers if necessary
-    credentials: true, // If you're dealing with cookies or HTTP authentication
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps, curl, etc.)
+      if (!origin) return callback(null, true);
+
+      // Check if the origin is in the allowed list
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true); // Origin allowed
+      } else {
+        callback(new Error("Not allowed by CORS")); // Origin not allowed
+      }
+    },
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // Allowed HTTP methods
+    allowedHeaders: ["Content-Type", "Authorization"], // Allowed headers
+    credentials: true, // Allow cookies or authentication headers
   })
 );
 
