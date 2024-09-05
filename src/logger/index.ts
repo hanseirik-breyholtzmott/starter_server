@@ -6,10 +6,19 @@ import fs from "fs";
 import path from "path";
 
 const betterstackToken = process.env.BETTERSTACK_TOKEN;
+
+if (!betterstackToken) {
+  throw new Error(
+    "BETTERSTACK_TOKEN is not defined in the environment variables"
+  );
+}
+
 const logtail = new Logtail(betterstackToken);
 
-// Define the path to the logs directory
-const logsDirectory = path.join(__dirname, "logs");
+const logsDirectory =
+  process.env.NODE_ENV === "production"
+    ? "/tmp/logs"
+    : path.join(__dirname, "logs");
 
 // Ensure the logs directory exists
 if (!fs.existsSync(logsDirectory)) {
