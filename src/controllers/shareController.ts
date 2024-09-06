@@ -707,7 +707,7 @@ const purchaseShares = async (req: Request, res: Response) => {
 
     //New shares
     var newShares = new SharesModel({
-      userid: user.user_id,
+      userId: user.user_id,
       numberOfShares: numberOfShares,
       purchasePrice: purchasePrice,
     });
@@ -721,12 +721,10 @@ const purchaseShares = async (req: Request, res: Response) => {
       });
     }
 
-    return res
-      .status(200)
-      .json({
-        success: true,
-        message: `Du har tegnet deg ${numberOfShares} aksjer i Folkekraft AS.`,
-      });
+    return res.status(200).json({
+      success: true,
+      message: `Du har tegnet deg ${numberOfShares} aksjer i Folkekraft AS.`,
+    });
   } catch (error) {
     errorService.handleServerError(res, error, "Server error");
   }

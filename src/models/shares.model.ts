@@ -5,7 +5,7 @@ import { ITransactionModel } from "./transaction.model";
 //Define the IShare interface
 export interface IShare {
   userId: string | IUserModel;
-  transactionId: string | ITransactionModel;
+  //transactionId: string | ITransactionModel;
   numberOfShares: number;
   purchaseDate: Date;
   purchasePrice: number;
@@ -18,11 +18,11 @@ export interface IShareModel extends IShare, Document {}
 const SharesSchema = new Schema(
   {
     userId: { type: Schema.Types.String, ref: "Users", required: true },
-    transactionId: {
+    /*transactionId: {
       type: Schema.Types.ObjectId,
       ref: "Transaction",
       required: true,
-    },
+    },*/
     numberOfShares: {
       type: Number,
       required: true,
