@@ -4,7 +4,10 @@ dotenv.config();
 
 const MONGODB_USERNAME = process.env.MONGODB_USERNAME;
 const MONGODB_PASSWORD = process.env.MONGODB_PASSWORD;
-const MONGO_URL = process.env.MONGODB_URL;
+const MONGODB_CLUSTER = process.env.MONGODB_CLUSTER;
+const MONGODB_DATABASE = process.env.MONGODB_DATABASE;
+
+const MONGODB_URL: string = `mongodb+srv://${MONGODB_USERNAME}:${MONGODB_PASSWORD}@${MONGODB_CLUSTER}/${MONGODB_DATABASE}`;
 
 const SERVER_PORT = process.env.SERVER_PORT
   ? Number(process.env.SERVER_PORT)
@@ -12,7 +15,7 @@ const SERVER_PORT = process.env.SERVER_PORT
 
 export const config = {
   mongo: {
-    url: MONGO_URL,
+    url: MONGODB_URL,
   },
   server: {
     port: SERVER_PORT,

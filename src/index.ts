@@ -7,7 +7,7 @@ import cors from "cors";
 import mongoose from "mongoose";
 import session from "express-session";
 import csurf from "csurf";
-import connectToMongooseDB from "./db/mongodb";
+//import connectToMongooseDB from "./db/mongodb";
 import dotenv from "dotenv";
 import {
   responseTimeMiddleware,

@@ -790,7 +790,7 @@ const campaginInfo = async (req: Request, res: Response) => {
       });
     }
 
-    const convertedLoanAmount = 2344625.2;
+    const convertedLoanAmount = 4206840;
     const convertedLoanShares = 0;
     const convertedLoanPurchase = 0;
 
@@ -809,6 +809,8 @@ const campaginInfo = async (req: Request, res: Response) => {
         totalAmount: totalShares * 8 + convertedLoanAmount,
         totalPurchases: countPurchases,
         closingDate: null,
+        sharesAvailable:
+          (8000000 - (totalShares * 8 + convertedLoanAmount)) / 8,
         goal: ((totalShares * 8 + convertedLoanAmount) / 8000000).toFixed(2),
       },
     });

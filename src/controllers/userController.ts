@@ -352,9 +352,9 @@ const register = async (req: Request, res: Response) => {
     const templatePath = path.join();
 
     const sendEmail = await emailService.sendEmail(
-      "Acme <onboarding@resend.dev>",
+      "Folkekraft <onboarding@resend.dev>",
       [newUser.primaryEmailAddress],
-      "Welcome",
+      "Verify your email | Folkekraft",
       `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
       <html dir="ltr" lang="en">
         <head>
@@ -442,6 +442,143 @@ const register = async (req: Request, res: Response) => {
     });
   } catch (error) {
     errorService.handleServerError(res, error, "Server error");
+  }
+};
+
+const resendVerificationEmail = async (req: Request, res: Response) => {
+  const { email } = req.body;
+
+  try {
+    const isEmailTaken = await userService.emailExists(email);
+
+    if (!isEmailTaken) {
+      userLogger.warn("User not found for email verification resend", {
+        email,
+      });
+      return errorService.handleClientError(res, 404, "User not found");
+    }
+
+    const user = await userService.getUserByEmail(email);
+
+    if (user.hasVerifiedPrimaryEmailAddress) {
+      userLogger.info("User already verified", { userId: user.user_id, email });
+      return errorService.handleClientError(res, 400, "Email already verified");
+    }
+
+    // Generate a new verification token
+    const verificationToken = tokenService.verificationToken();
+
+    // Update user with new verification token and expiration
+    user.verificationToken = verificationToken;
+    user.verificationTokenExpiresAt = new Date(
+      Date.now() + 24 * 60 * 60 * 1000
+    ); // 24 hours from now
+    await user.save();
+
+    // Generate magic link
+    const magicToken = jwt.sign(
+      { token: verificationToken },
+      process.env.JWT_SECRET_KEY,
+      { expiresIn: "24h" }
+    );
+    const magicLink =
+      process.env.CLIENT_BASE_URL + "/verification?token=" + magicToken;
+
+    const sendEmail = await emailService.sendEmail(
+      "Folkekraft <onboarding@resend.dev>",
+      [user.primaryEmailAddress],
+      "Verify your email | Folkekraft",
+      `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+        <html dir="ltr" lang="en">
+          <head>
+            <meta content="text/html; charset=UTF-8" http-equiv="Content-Type" />
+            <meta name="x-apple-disable-message-reformatting" />
+            <!--$-->
+          </head>
+          <div
+            style="
+              display: none;
+              overflow: hidden;
+              line-height: 1px;
+              opacity: 0;
+              max-height: 0;
+              max-width: 0;
+            "
+          >
+            Log in with this magic link
+          </div>
+  
+          <body style="background-color: #ffffff">
+            <table
+              align="center"
+              width="100%"
+              border="0"
+              cellpadding="0"
+              cellspacing="0"
+              role="presentation"
+              style="
+                max-width: 37.5em;
+                padding-left: 12px;
+                padding-right: 12px;
+                margin: 0 auto;
+              "
+            >
+              <tbody>
+                <tr style="width: 100%">
+                  <td>
+                    <h1
+                      style="color:#333;font-family:-apple-system, BlinkMacSystemFont, &#x27;Segoe UI&#x27;, &#x27;Roboto&#x27;, &#x27;Oxygen&#x27;, &#x27;Ubuntu&#x27;, &#x27;Cantarell&#x27;, &#x27;Fira Sans&#x27;, &#x27;Droid Sans&#x27;, &#x27;Helvetica Neue&#x27;, sans-serif;font-size:24px;font-weight:bold;margin:40px 0;padding:0"
+                    >
+                      Login
+                    </h1>
+                    <a
+                      href="${magicLink}"
+                      style="color:#2754C5;text-decoration:underline;font-family:-apple-system, BlinkMacSystemFont, &#x27;Segoe UI&#x27;, &#x27;Roboto&#x27;, &#x27;Oxygen&#x27;, &#x27;Ubuntu&#x27;, &#x27;Cantarell&#x27;, &#x27;Fira Sans&#x27;, &#x27;Droid Sans&#x27;, &#x27;Helvetica Neue&#x27;, sans-serif;font-size:14px;display:block;margin-bottom:16px"
+                      target="_blank"
+                      >Click here to log in with this magic link</a
+                    >
+                    <p
+                      style="font-size:14px;line-height:24px;margin:24px 0;color:#333;font-family:-apple-system, BlinkMacSystemFont, &#x27;Segoe UI&#x27;, &#x27;Roboto&#x27;, &#x27;Oxygen&#x27;, &#x27;Ubuntu&#x27;, &#x27;Cantarell&#x27;, &#x27;Fira Sans&#x27;, &#x27;Droid Sans&#x27;, &#x27;Helvetica Neue&#x27;, sans-serif;margin-bottom:14px"
+                    >
+                      Or, copy and paste this temporary login code:
+                    </p>
+                    <code
+                      style="
+                        display: inline-block;
+                        padding: 16px 4.5%;
+                        width: 90.5%;
+                        background-color: #f4f4f4;
+                        border-radius: 5px;
+                        border: 1px solid #eee;
+                        color: #333;
+                      "
+                      >${verificationToken}</code
+                    >
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <!--/$-->
+          </body>
+        </html>`
+    );
+
+    userLogger.info("Verification email resent", {
+      userId: user.user_id,
+      email,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Verification email has been resent.",
+    });
+  } catch (error) {
+    userLogger.error("Error resending verification email", { error });
+    return errorService.handleServerError(
+      res,
+      error,
+      "Error resending verification email"
+    );
   }
 };
 
@@ -768,6 +905,7 @@ export default {
   verifyEmail,
   login,
   register,
+  resendVerificationEmail,
   refreshToken,
   forgotPassword,
   resetPassword,

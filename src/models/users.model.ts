@@ -66,7 +66,7 @@ export interface IUser {
   firstName: string | null;
   lastName: string | null;
   fullName: string | null;
-  username: string | null;
+  //username: string | null;
   hasImage: boolean;
   imageUrl: string | null;
   address: IAddress | null;
@@ -119,12 +119,13 @@ const UsersSchema = new Schema(
     firstName: { type: Schema.Types.String, default: null },
     lastName: { type: Schema.Types.String, default: null },
     fullName: { type: Schema.Types.String, default: null },
-    username: { type: Schema.Types.String, unique: true, default: null },
+    //username: { type: Schema.Types.String, unique: true, default: null },
     hasImage: { type: Schema.Types.Boolean, default: false },
     imageUrl: { type: Schema.Types.String, default: null },
     address: { type: AddressSchema, default: null },
     primaryEmailAddress: {
       type: Schema.Types.String,
+      required: true,
       unique: true,
       default: null,
     },
@@ -223,11 +224,19 @@ const UsersSchema = new Schema(
 );
 
 // Pre-save hook to ensure the id is set
-UsersSchema.pre("save", function (next) {
+UsersSchema.pre("save", async function (next) {
   if (!this.id) {
     this.id = uuidv4();
   }
+  const model = mongoose.model("Users");
+  try {
+    await model.collection.dropIndex("ssn_1");
+  } catch (error) {
+    // Index might not exist, so we can ignore this error
+  }
   next();
 });
+
+UsersSchema.index({ ssn: 1 }, { unique: true, sparse: true });
 
 export default mongoose.model<IUserModel>("Users", UsersSchema);
