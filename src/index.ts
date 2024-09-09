@@ -19,6 +19,7 @@ dotenv.config();
 
 //Router
 import authRoutes from "./router/authRoutes";
+import transactionRoutes from "./router/transactionRouter";
 
 //delete after use
 import shareRoutes from "./router/shareRoutes";
@@ -77,6 +78,7 @@ app.use(
 
 //Routes
 app.use("/", authRoutes);
+app.use("/", transactionRoutes);
 
 //delete after use
 app.use("/", shareRoutes);

@@ -29,16 +29,18 @@ export interface ITransaction {
   discount: number;
   metadata?: Map<string, string>;
   transactionDate: Date;
-  updatedAt: Date;
-  createdAt: Date;
 }
 
 export interface ITransactionModel extends ITransaction, Document {}
 
 const TransactionSchema: Schema = new Schema<ITransaction>(
   {
-    userId: { type: Schema.Types.ObjectId, ref: "Users", required: true },
-    stripePaymentId: { type: String, required: true, unique: true },
+    userId: { type: Schema.Types.String, ref: "Users", required: true },
+    stripePaymentId: {
+      type: Schema.Types.String,
+      required: true,
+      //unique: true,
+    },
     transactionType: {
       type: Schema.Types.String,
       required: true,
@@ -71,8 +73,11 @@ const TransactionSchema: Schema = new Schema<ITransaction>(
         { productId: Schema.Types.ObjectId, quantity: Number, price: Number },
       ],
       validate: {
-        validator: function () {
-          return this.transactionType === "product" && this.products.length > 0;
+        validator: function (this: ITransaction) {
+          return (
+            this.transactionType !== "product" ||
+            (this.products && this.products.length > 0)
+          );
         },
         message: "Products field is required for product transactions",
       },

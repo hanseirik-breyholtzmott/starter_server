@@ -16,4 +16,6 @@ router.get("/api/totalshares/:userId", shareController.totalSharesByUserId);
 
 router.get("/api/folkekraft/:userId", shareController.campaginInfo);
 
+router.get("/api/cap-table", shareController.getCapTable);
+
 export default router;

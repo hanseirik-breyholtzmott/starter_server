@@ -6,16 +6,19 @@ import notificationService from "../service/notificationService";
 import emailService from "../service/emailService";
 import errorService from "../service/errorService";
 import shareService from "../service/shareService";
+import transactionService from "../service/transactionService";
 
 //Models
 import UsersModel from "../models/users.model";
 import SharesModel from "../models/shares.model";
-
+import TransactionModel, { ITransaction } from "../models/transaction.model";
 //Types
 import { JwtPayload } from "../types/authTypes";
 
 const purchaseShares = async (req: Request, res: Response) => {
-  const { userId, numberOfShares, purchasePrice, ssn } = req.body;
+  const { userId, numberOfShares, purchasePrice, ssn, stripePaymentId } =
+    req.body;
+  console.log(req.body);
 
   try {
     //Check if the user exists
@@ -32,11 +35,36 @@ const purchaseShares = async (req: Request, res: Response) => {
     const notification = await notificationService.createNotification(
       user.user_id,
       `You have bought ${numberOfShares} shares.`,
-      `You have bought ${numberOfShares} shares for ${
-        numberOfShares * purchasePrice
-      } kr.`,
+      `You have bought ${numberOfShares} shares for ${purchasePrice} kr.`,
       "info"
     );
+
+    //Create a transaction
+    const transactionData: ITransaction = {
+      userId: user.user_id,
+      stripePaymentId: `Emisjon_${ssn.slice(-5)}`, // You might want to generate a unique ID
+      paymentMethod: "bank_transfer", // Adjust as needed
+      transactionType: "shares",
+      amount: purchasePrice,
+      currency: "NOK", // Adjust if needed
+      status: "pending", // Set initial status as pending
+      taxAmount: 0, // Adjust if applicable
+      taxRate: 0, // Adjust if applicable
+      discount: 0, // Adjust if applicable
+      metadata: new Map([["sharesPurchased", numberOfShares.toString()]]),
+      transactionDate: new Date(),
+    };
+
+    const newTransaction = await transactionService.createTransaction(
+      transactionData
+    );
+
+    if (!newTransaction) {
+      return res.status(500).json({
+        success: false,
+        message: "Error creating transaction",
+      });
+    }
 
     // Send email with stock puchase
     const email = await emailService.sendEmail(
@@ -708,8 +736,10 @@ const purchaseShares = async (req: Request, res: Response) => {
     //New shares
     var newShares = new SharesModel({
       userId: user.user_id,
+      transactionId: newTransaction._id,
       numberOfShares: numberOfShares,
       purchasePrice: purchasePrice,
+      ssn: ssn,
     });
 
     const savedPurchase = await newShares.save();
@@ -819,4 +849,35 @@ const campaginInfo = async (req: Request, res: Response) => {
   }
 };
 
-export default { purchaseShares, totalSharesByUserId, campaginInfo };
+const getCapTable = async (req: Request, res: Response) => {
+  try {
+    const capTable = await shareService.getSharesWithUserDetails();
+
+    const totalShares = capTable.reduce(
+      (sum, entry) => sum + entry.totalShares,
+      0
+    );
+
+    const capTableWithPercentage = capTable.map((entry) => ({
+      ...entry,
+      ownershipPercentage:
+        ((entry.totalShares / totalShares) * 100).toFixed(2) + "%",
+    }));
+
+    return res.status(200).json({
+      success: true,
+      message: "Cap table retrieved successfully",
+      capTable: capTableWithPercentage,
+      totalShares,
+    });
+  } catch (error) {
+    errorService.handleServerError(res, error, "Server error");
+  }
+};
+
+export default {
+  purchaseShares,
+  totalSharesByUserId,
+  campaginInfo,
+  getCapTable,
+};

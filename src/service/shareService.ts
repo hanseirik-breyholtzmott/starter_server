@@ -1,4 +1,4 @@
-import sharesModel from "../models/shares.model";
+import sharesModel, { IShare } from "../models/shares.model";
 
 const countTotalSharesIn2024 = async (): Promise<number> => {
   try {
@@ -59,8 +59,53 @@ const countSharesByUserId = async (userId: string): Promise<number> => {
   }
 };
 
+const getSharesWithUserDetails = async () => {
+  try {
+    const shares = await sharesModel.aggregate([
+      {
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "user_id",
+          as: "userDetails",
+        },
+      },
+      {
+        $unwind: "$userDetails",
+      },
+      {
+        $group: {
+          _id: "$userId",
+          totalShares: { $sum: "$numberOfShares" },
+          userDetails: { $first: "$userDetails" },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          userId: "$_id",
+          totalShares: 1,
+          firstName: "$userDetails.firstName",
+          lastName: "$userDetails.lastName",
+          email: "$userDetails.primaryEmailAddress",
+          ssn: "$userDetails.ssn",
+        },
+      },
+      {
+        $sort: { totalShares: -1 },
+      },
+    ]);
+
+    return shares;
+  } catch (error) {
+    console.error("Error fetching shares with user details:", error);
+    throw error;
+  }
+};
+
 export default {
   countTotalSharesIn2024,
   countPurcahsesAfter2023,
   countSharesByUserId,
+  getSharesWithUserDetails,
 };

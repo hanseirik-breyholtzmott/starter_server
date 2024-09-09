@@ -66,6 +66,7 @@ export interface IUser {
   firstName: string | null;
   lastName: string | null;
   fullName: string | null;
+  //ownedHoldingCompanies: Schema.Types.String[];
   //username: string | null;
   hasImage: boolean;
   imageUrl: string | null;
