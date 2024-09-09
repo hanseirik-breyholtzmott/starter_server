@@ -18,4 +18,9 @@ router.get("/api/folkekraft/:userId", shareController.campaginInfo);
 
 router.get("/api/cap-table", shareController.getCapTable);
 
+router.post(
+  "/api/create-user-with-shares",
+  userController.createUserWithSharesAndTransaction
+);
+
 export default router;

@@ -11,10 +11,13 @@ import sessionService from "../service/sessionService";
 import notificationService from "../service/notificationService";
 import emailService from "../service/emailService";
 import errorService from "../service/errorService";
+import transactionService from "../service/transactionService";
 
 //Models
 import UsersModel, { IUser } from "../models/users.model";
 import SessionModel from "../models/session.model";
+import TransactionModel, { ITransaction } from "../models/transaction.model";
+import SharesModel from "../models/shares.model";
 
 //Types
 import { JwtPayload } from "../types/authTypes";
@@ -899,6 +902,90 @@ const getNotifications = async (req: Request, res: Response) => {
   }
 };
 
+const createUserWithSharesAndTransaction = async (
+  req: Request,
+  res: Response
+) => {
+  const {
+    firstName,
+    lastName,
+    primaryEmailAddress,
+    primaryPhoneNumber,
+    password,
+    ssn,
+    role,
+    earlyInvestmentShares,
+    transactionDate,
+    recommendedPurchase,
+  } = req.body;
+
+  try {
+    //Create a user
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = new UsersModel({
+      firstName,
+      lastName,
+      primaryEmailAddress,
+      primaryPhoneNumber,
+      password: hashedPassword,
+      ssn,
+      role,
+      roles: [{ name: role, permissions: [] }], // Assuming 'role' maps to the role name
+      recommendedShares: recommendedPurchase,
+    });
+
+    const savedUser = await newUser.save();
+
+    // Create Transaction
+    const transactionData: ITransaction = {
+      userId: savedUser.user_id,
+      stripePaymentId: `Folkeinvest_${ssn.slice(-5)}`,
+      paymentMethod: "bank_transfer",
+      transactionType: "shares",
+      amount: earlyInvestmentShares * 12,
+      currency: "NOK",
+      status: "paid", // Assuming early investment is already completed
+      taxAmount: 0,
+      taxRate: 0,
+      discount: 0,
+      metadata: new Map([
+        ["sharesPurchased", earlyInvestmentShares.toString()],
+      ]),
+      transactionDate: new Date(transactionDate),
+    };
+
+    const newTransaction = await transactionService.createTransaction(
+      transactionData
+    );
+
+    // Create Shares
+    const newShares = new SharesModel({
+      userId: savedUser.user_id,
+      transactionId: newTransaction._id,
+      numberOfShares: earlyInvestmentShares,
+      purchasePrice: 8, // Assuming 8 kr per share
+      purchaseDate: new Date(transactionDate),
+      ssn,
+    });
+
+    const savedShares = await newShares.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "User, shares, and transaction created successfully",
+      user: savedUser,
+      transaction: newTransaction,
+      shares: savedShares,
+    });
+  } catch (error) {
+    errorService.handleServerError(
+      res,
+      error,
+      "Error creating user, shares, and transaction"
+    );
+  }
+};
+
 export default {
   createUser,
   getUser,
@@ -910,4 +997,5 @@ export default {
   forgotPassword,
   resetPassword,
   getNotifications,
+  createUserWithSharesAndTransaction,
 };
