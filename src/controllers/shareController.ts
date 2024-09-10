@@ -78,18 +78,7 @@ const purchaseShares = async (req: Request, res: Response) => {
             <meta name="x-apple-disable-message-reformatting" />
             <!--$-->
           </head>
-          <div
-            style="
-              display: none;
-              overflow: hidden;
-              line-height: 1px;
-              opacity: 0;
-              max-height: 0;
-              max-width: 0;
-            "
-          >
-            Apple Receipt
-          </div>
+          
 
           <body
             style="
@@ -833,6 +822,8 @@ const campaginInfo = async (req: Request, res: Response) => {
     return res.status(200).json({
       user: {
         totalShares: totalSharesByUser,
+        recommendedPurchase: user.recommendedShares,
+        purchaseRight: user.purchaseRight,
       },
       data: {
         totalShares: totalShares + convertedLoanShares,
@@ -875,9 +866,31 @@ const getCapTable = async (req: Request, res: Response) => {
   }
 };
 
+const getPurchaseRight = async (req: Request, res: Response) => {
+  const userId = req.params.userId;
+
+  try {
+    const user = await UsersModel.findById(userId);
+
+    if (!user) {
+      return errorService.handleClientError(res, 400, "User not found");
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Purchase right retrieved successfully",
+      recommendedPurchase: user.recommendedShares,
+      purchaseRight: user.purchaseRight,
+    });
+  } catch (error) {
+    console.log(error);
+  }
+};
+
 export default {
   purchaseShares,
   totalSharesByUserId,
   campaginInfo,
   getCapTable,
+  getPurchaseRight,
 };

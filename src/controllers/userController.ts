@@ -355,7 +355,7 @@ const register = async (req: Request, res: Response) => {
     const templatePath = path.join();
 
     const sendEmail = await emailService.sendEmail(
-      "Folkekraft <onboarding@resend.dev>",
+      "Folkekraft AS <noreply@folkekraft.no",
       [newUser.primaryEmailAddress],
       "Verify your email | Folkekraft",
       `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -488,7 +488,7 @@ const resendVerificationEmail = async (req: Request, res: Response) => {
       process.env.CLIENT_BASE_URL + "/verification?token=" + magicToken;
 
     const sendEmail = await emailService.sendEmail(
-      "Folkekraft <onboarding@resend.dev>",
+      "Folkekraft AS <noreply@folkekraft.no>",
       [user.primaryEmailAddress],
       "Verify your email | Folkekraft",
       `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -709,7 +709,7 @@ const forgotPassword = async (req: Request, res: Response) => {
     const resetUrl = `http://${req.headers.host}/reset/${token}`;
     //email
     const sendEmail = await emailService.sendEmail(
-      "Acme <folkekraft@resend.dev>",
+      "Folkekraft AS <noreply@folkekraft.no>",
       [email],
       "Reset Password",
       `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -809,7 +809,7 @@ const resetPassword = async (req: Request, res: Response) => {
 
     //email
     const sendEmail = await emailService.sendEmail(
-      "Acme <lasseisgay@resend.dev>",
+      "Folkekraft AS <noreply@folkekraft.no>",
       [user.primaryEmailAddress],
       "Your password has been updated",
       `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -917,6 +917,7 @@ const createUserWithSharesAndTransaction = async (
     earlyInvestmentShares,
     transactionDate,
     recommendedPurchase,
+    purchaseRight,
   } = req.body;
 
   try {
@@ -932,6 +933,7 @@ const createUserWithSharesAndTransaction = async (
       role,
       roles: [{ name: role, permissions: [] }], // Assuming 'role' maps to the role name
       recommendedShares: recommendedPurchase,
+      purchaseRight,
     });
 
     const savedUser = await newUser.save();
@@ -969,6 +971,80 @@ const createUserWithSharesAndTransaction = async (
     });
 
     const savedShares = await newShares.save();
+
+    await emailService.sendEmail(
+      "Folkekraft AS <noreply@folkekraft.no>",
+      [primaryEmailAddress],
+      "Innlogging til Folkekraft AS Kampanje",
+      `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+        <html dir="ltr" lang="en">
+          <head>
+            <meta content="text/html; charset=UTF-8" http-equiv="Content-Type" />
+            
+            <!--$-->
+          </head>
+          <div
+            style="
+              display: none;
+              overflow: hidden;
+              line-height: 1px;
+              opacity: 0;
+              max-height: 0;
+              max-width: 0;
+            "
+          >
+            Log in with this magic link
+          </div>
+  
+          <body style="background-color: #ffffff">
+            <table
+              align="center"
+              width="100%"
+              border="0"
+              cellpadding="0"
+              cellspacing="0"
+              role="presentation"
+              style="
+                max-width: 37.5em;
+                padding-left: 12px;
+                padding-right: 12px;
+                margin: 0 auto;
+              "
+            >
+              <tbody>
+                <tr style="width: 100%">
+                  <td>
+                    <h1
+                      style="color:#333;font-family:-apple-system, BlinkMacSystemFont, &#x27;Segoe UI&#x27;, &#x27;Roboto&#x27;, &#x27;Oxygen&#x27;, &#x27;Ubuntu&#x27;, &#x27;Cantarell&#x27;, &#x27;Fira Sans&#x27;, &#x27;Droid Sans&#x27;, &#x27;Helvetica Neue&#x27;, sans-serif;font-size:24px;font-weight:bold;margin:40px 0;padding:0"
+                    >
+                      Innlogging til Folkekraft AS Kampanje
+                    </h1>
+                    
+                    <p
+                      style="font-size:14px;line-height:24px;margin:24px 0;color:#333;font-family:-apple-system, BlinkMacSystemFont, &#x27;Segoe UI&#x27;, &#x27;Roboto&#x27;, &#x27;Oxygen&#x27;, &#x27;Ubuntu&#x27;, &#x27;Cantarell&#x27;, &#x27;Fira Sans&#x27;, &#x27;Droid Sans&#x27;, &#x27;Helvetica Neue&#x27;, sans-serif;margin-bottom:14px"
+                    >
+                      Brukernavn: ${primaryEmailAddress}
+                    </p>
+                    <code
+                      style="
+                        display: inline-block;
+                        padding: 16px 4.5%;
+                        width: 90.5%;
+                        background-color: #f4f4f4;
+                        border-radius: 5px;
+                        border: 1px solid #eee;
+                        color: #333;
+                      "
+                      >Passord: ${password}</code
+                    >
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <!--/$-->
+          </body>
+        </html>`
+    );
 
     return res.status(200).json({
       success: true,

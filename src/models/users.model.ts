@@ -87,6 +87,7 @@ export interface IUser {
   stripeCustomerId: string | null;
   roles: IRole[];
   recommendedShares: number;
+  purchaseRight: number;
   lastSignInAt: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -222,6 +223,7 @@ const UsersSchema = new Schema(
     ],
     lastSignInAt: { type: Schema.Types.Date, default: Date.now },
     recommendedShares: { type: Number, default: 0 },
+    purchaseRight: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

@@ -23,4 +23,6 @@ router.post(
   userController.createUserWithSharesAndTransaction
 );
 
+router.get("/api/investor/:userId", shareController.getPurchaseRight);
+
 export default router;
