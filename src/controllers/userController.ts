@@ -977,73 +977,113 @@ const createUserWithSharesAndTransaction = async (
       [primaryEmailAddress],
       "Innlogging til Folkekraft AS Kampanje",
       `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-        <html dir="ltr" lang="en">
-          <head>
-            <meta content="text/html; charset=UTF-8" http-equiv="Content-Type" />
-            
-            <!--$-->
-          </head>
-          <div
-            style="
-              display: none;
-              overflow: hidden;
-              line-height: 1px;
-              opacity: 0;
-              max-height: 0;
-              max-width: 0;
-            "
-          >
-            Log in with this magic link
-          </div>
-  
-          <body style="background-color: #ffffff">
-            <table
-              align="center"
-              width="100%"
-              border="0"
-              cellpadding="0"
-              cellspacing="0"
-              role="presentation"
-              style="
-                max-width: 37.5em;
-                padding-left: 12px;
-                padding-right: 12px;
-                margin: 0 auto;
-              "
+<html dir="ltr" lang="en">
+  <head>
+    <meta content="text/html; charset=UTF-8" http-equiv="Content-Type" />
+    <meta name="x-apple-disable-message-reformatting" />
+    <!--$-->
+  </head>
+  <div
+    style="
+      display: none;
+      overflow: hidden;
+      line-height: 1px;
+      opacity: 0;
+      max-height: 0;
+      max-width: 0;
+    "
+  >
+    Log in with this magic link
+  </div>
+
+  <body style="background-color: #ffffff">
+    <table
+      align="center"
+      width="100%"
+      border="0"
+      cellpadding="0"
+      cellspacing="0"
+      role="presentation"
+      style="
+        max-width: 37.5em;
+        padding-left: 12px;
+        padding-right: 12px;
+        margin: 0 auto;
+      "
+    >
+      <tbody>
+        <tr style="width: 100%">
+          <td>
+            <h1
+              style="color:#333;font-family:-apple-system, BlinkMacSystemFont, &#x27;Segoe UI&#x27;, &#x27;Roboto&#x27;, &#x27;Oxygen&#x27;, &#x27;Ubuntu&#x27;, &#x27;Cantarell&#x27;, &#x27;Fira Sans&#x27;, &#x27;Droid Sans&#x27;, &#x27;Helvetica Neue&#x27;, sans-serif;font-size:24px;font-weight:bold;margin:40px 0;padding:0"
             >
-              <tbody>
-                <tr style="width: 100%">
-                  <td>
-                    <h1
-                      style="color:#333;font-family:-apple-system, BlinkMacSystemFont, &#x27;Segoe UI&#x27;, &#x27;Roboto&#x27;, &#x27;Oxygen&#x27;, &#x27;Ubuntu&#x27;, &#x27;Cantarell&#x27;, &#x27;Fira Sans&#x27;, &#x27;Droid Sans&#x27;, &#x27;Helvetica Neue&#x27;, sans-serif;font-size:24px;font-weight:bold;margin:40px 0;padding:0"
-                    >
-                      Innlogging til Folkekraft AS Kampanje
-                    </h1>
-                    
-                    <p
-                      style="font-size:14px;line-height:24px;margin:24px 0;color:#333;font-family:-apple-system, BlinkMacSystemFont, &#x27;Segoe UI&#x27;, &#x27;Roboto&#x27;, &#x27;Oxygen&#x27;, &#x27;Ubuntu&#x27;, &#x27;Cantarell&#x27;, &#x27;Fira Sans&#x27;, &#x27;Droid Sans&#x27;, &#x27;Helvetica Neue&#x27;, sans-serif;margin-bottom:14px"
-                    >
-                      Brukernavn: ${primaryEmailAddress}
-                    </p>
-                    <code
-                      style="
-                        display: inline-block;
-                        padding: 16px 4.5%;
-                        width: 90.5%;
-                        background-color: #f4f4f4;
-                        border-radius: 5px;
-                        border: 1px solid #eee;
-                        color: #333;
-                      "
-                      >Passord: ${password}</code
-                    >
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-            <!--/$-->
-          </body>
-        </html>`
+              Velkommen til Folkekraft sin emisjon!
+            </h1>
+
+            <p
+              style="font-size:14px;line-height:24px;margin:24px 0;color:#333;font-family:-apple-system, BlinkMacSystemFont, &#x27;Segoe UI&#x27;, &#x27;Roboto&#x27;, &#x27;Oxygen&#x27;, &#x27;Ubuntu&#x27;, &#x27;Cantarell&#x27;, &#x27;Fira Sans&#x27;, &#x27;Droid Sans&#x27;, &#x27;Helvetica Neue&#x27;, sans-serif;margin-bottom:14px"
+            >
+              Her er din innloggingsinformasjon:
+            </p>
+            <br />
+            <p
+              style="font-size:14px;line-height:24px;margin:24px 0;color:#333;font-family:-apple-system, BlinkMacSystemFont, &#x27;Segoe UI&#x27;, &#x27;Roboto&#x27;, &#x27;Oxygen&#x27;, &#x27;Ubuntu&#x27;, &#x27;Cantarell&#x27;, &#x27;Fira Sans&#x27;, &#x27;Droid Sans&#x27;, &#x27;Helvetica Neue&#x27;, sans-serif;margin-bottom:14px"
+            >
+              <strong>Brukernavn:</strong><br />${primaryEmailAddress}
+            </p>
+            <p
+              style="font-size:14px;line-height:24px;margin:24px 0;color:#333;font-family:-apple-system, BlinkMacSystemFont, &#x27;Segoe UI&#x27;, &#x27;Roboto&#x27;, &#x27;Oxygen&#x27;, &#x27;Ubuntu&#x27;, &#x27;Cantarell&#x27;, &#x27;Fira Sans&#x27;, &#x27;Droid Sans&#x27;, &#x27;Helvetica Neue&#x27;, sans-serif;margin-bottom:14px"
+            >
+              <strong>Passord:</strong><br />${password}
+            </p>
+            <p
+              style="font-size:14px;line-height:24px;margin:24px 0;color:#333;font-family:-apple-system, BlinkMacSystemFont, &#x27;Segoe UI&#x27;, &#x27;Roboto&#x27;, &#x27;Oxygen&#x27;, &#x27;Ubuntu&#x27;, &#x27;Cantarell&#x27;, &#x27;Fira Sans&#x27;, &#x27;Droid Sans&#x27;, &#x27;Helvetica Neue&#x27;, sans-serif;margin-bottom:14px"
+            >
+              <strong>Lenke for innlogging:</strong><br />
+            </p>
+
+            <code
+              style="
+                display: inline-block;
+                padding: 16px 4.5%;
+                width: 90.5%;
+                background-color: #f4f4f4;
+                border-radius: 5px;
+                border: 1px solid #eee;
+                color: #333;
+              "
+              ><a href="https://invest.folkekraft.no/sign-in"
+                >https://invest.folkekraft.no/sign-in</a
+              ></code
+            >
+            <p
+              style="font-size:14px;line-height:24px;margin:24px 0;color:#333;font-family:-apple-system, BlinkMacSystemFont, &#x27;Segoe UI&#x27;, &#x27;Roboto&#x27;, &#x27;Oxygen&#x27;, &#x27;Ubuntu&#x27;, &#x27;Cantarell&#x27;, &#x27;Fira Sans&#x27;, &#x27;Droid Sans&#x27;, &#x27;Helvetica Neue&#x27;, sans-serif;margin-bottom:14px"
+            >
+              For best mulig opplevelse anbefaler vi at du logger inn via en PC,
+              ikke mobil.
+            </p>
+            <p
+              style="font-size:14px;line-height:24px;margin:24px 0;color:#333;font-family:-apple-system, BlinkMacSystemFont, &#x27;Segoe UI&#x27;, &#x27;Roboto&#x27;, &#x27;Oxygen&#x27;, &#x27;Ubuntu&#x27;, &#x27;Cantarell&#x27;, &#x27;Fira Sans&#x27;, &#x27;Droid Sans&#x27;, &#x27;Helvetica Neue&#x27;, sans-serif;margin-bottom:14px"
+            >
+              Hvis du har spørsmål eller trenger hjelp med innloggingen, er du
+              velkommen til å kontakte investorkontakt, Lasse Gjellestad, på
+              <a href="mailto:lg@folkekraft.no">lg@folkekraft.no</a> eller 907
+              09 413.
+            </p>
+            <p
+              style="font-size:14px;line-height:24px;margin:24px 0;color:#333;font-family:-apple-system, BlinkMacSystemFont, &#x27;Segoe UI&#x27;, &#x27;Roboto&#x27;, &#x27;Oxygen&#x27;, &#x27;Ubuntu&#x27;, &#x27;Cantarell&#x27;, &#x27;Fira Sans&#x27;, &#x27;Droid Sans&#x27;, &#x27;Helvetica Neue&#x27;, sans-serif;margin-bottom:14px"
+            >
+              Vennlig hilsen,<br />
+              Folkekraft Teamet
+            </p>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <!--/$-->
+  </body>
+</html>
+`
     );
 
     return res.status(200).json({
