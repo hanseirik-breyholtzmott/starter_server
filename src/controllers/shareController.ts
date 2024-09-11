@@ -175,22 +175,7 @@ const purchaseShares = async (req: Request, res: Response) => {
                       at bankoverføring til Folkekraft er nødvendig for å
                       ferdigstille kjøpsprosessen.
                     </p>
-                    <p
-                      style="
-                        font-size: 14px;
-                        line-height: 24px;
-                        margin: 36px 0 40px 0;
-                        text-align: center;
-                        font-weight: 500;
-                        color: #111111;
-                      "
-                    >
-                      <strong>Teknisk informasjon</strong><br />
-                      Ditt aksjekjøp blir regnet som lånefordring i Folkekraft
-                      frem til aksjeoppgjøret er fullført ved lukking av
-                      emisjonen. Folkekraft forbeholder seg retten til å benytte
-                      investerte midler før emisjonen er avsluttet.
-                    </p>
+                    
                   </td>
                 </tr>
               </tbody>
