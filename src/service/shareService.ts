@@ -41,6 +41,32 @@ const countPurcahsesAfter2023 = async (): Promise<number> => {
   }
 };
 
+const countTotalSharesByUserId = async (userId: string): Promise<number> => {
+  try {
+    const result = await sharesModel.aggregate([
+      {
+        $match: { userId: userId },
+      },
+      {
+        $group: {
+          _id: null,
+          totalShares: { $sum: "$numberOfShares" },
+        },
+      },
+    ]);
+
+    // If the user has no shares, the result will be an empty array
+    if (result.length === 0) {
+      return 0;
+    }
+
+    return result[0].totalShares;
+  } catch (error) {
+    console.error(`Error counting total shares for user ${userId}:`, error);
+    throw error;
+  }
+};
+
 const countSharesByUserId = async (userId: string): Promise<number> => {
   try {
     const shares = await sharesModel.find({ userid: userId });
@@ -108,4 +134,5 @@ export default {
   countPurcahsesAfter2023,
   countSharesByUserId,
   getSharesWithUserDetails,
+  countTotalSharesByUserId,
 };

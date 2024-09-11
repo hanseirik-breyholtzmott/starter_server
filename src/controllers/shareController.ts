@@ -795,7 +795,9 @@ const campaginInfo = async (req: Request, res: Response) => {
 
     const totalShares = await shareService.countTotalSharesIn2024();
 
-    const totalSharesByUser = await shareService.countSharesByUserId(userId);
+    const totalSharesByUser = await shareService.countTotalSharesByUserId(
+      userId
+    );
 
     const countPurchases = await shareService.countPurcahsesAfter2023();
 
