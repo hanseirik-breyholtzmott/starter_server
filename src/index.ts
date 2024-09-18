@@ -7,7 +7,6 @@ import cors from "cors";
 import mongoose from "mongoose";
 import session from "express-session";
 import csurf from "csurf";
-//import connectToMongooseDB from "./db/mongodb";
 import dotenv from "dotenv";
 import {
   responseTimeMiddleware,
@@ -20,12 +19,10 @@ dotenv.config();
 //Router
 import authRoutes from "./router/authRoutes";
 import transactionRoutes from "./router/transactionRouter";
-
-//delete after use
 import shareRoutes from "./router/shareRoutes";
+import campaignRoutes from "./router/campaignRoutes";
 
 import router from "./router";
-import userService from "./service/userService";
 
 const app = express();
 const SERVER_PORT = process.env.SERVER_PORT
@@ -79,9 +76,8 @@ app.use(
 //Routes
 app.use("/", authRoutes);
 app.use("/", transactionRoutes);
-
-//delete after use
 app.use("/", shareRoutes);
+app.use("/", campaignRoutes);
 
 // Healthcheck Route
 app.get("/healthcheck", (req, res) => {

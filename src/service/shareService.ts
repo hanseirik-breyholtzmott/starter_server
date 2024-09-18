@@ -114,7 +114,6 @@ const getSharesWithUserDetails = async () => {
           firstName: "$userDetails.firstName",
           lastName: "$userDetails.lastName",
           email: "$userDetails.primaryEmailAddress",
-          ssn: "$userDetails.ssn",
         },
       },
       {

@@ -76,8 +76,24 @@ winston.loggers.add("MiddlewareLogger", {
   defaultMeta: { service: "MiddlewareService" },
 });
 
+//Campaign Logger
+winston.loggers.add("CampaignLogger", {
+  level: "info",
+  format: combine(errors({ stack: true }), timestamp(), json()),
+  transports: [
+    new winston.transports.Console(),
+    new winston.transports.File({
+      filename: path.join(logsDirectory, "campaign.log"),
+      level: "info",
+    }),
+    new LogtailTransport(logtail),
+  ],
+  defaultMeta: { service: "CampaignService" },
+});
+
 const middlewareLogger = winston.loggers.get("MiddlewareLogger");
 const userLogger = winston.loggers.get("UserLogger");
 const dbLogger = winston.loggers.get("DBLogger");
+const campaignLogger = winston.loggers.get("CampaignLogger");
 
-export { userLogger, dbLogger, middlewareLogger };
+export { userLogger, dbLogger, middlewareLogger, campaignLogger };

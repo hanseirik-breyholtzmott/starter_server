@@ -28,4 +28,11 @@ router.post(
 
 router.get("/api/notifications/:userId", userController.getNotifications);
 
+//Vipps
+router.get("/api/vipps/login", userController.vippsLogin);
+
+router.get("/api/vipps/callback", userController.vippsCallback);
+
+router.get("/api/vipps/userinfo", userController.vippsUserInfo);
+
 export default router;

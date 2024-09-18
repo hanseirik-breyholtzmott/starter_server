@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import fs from "fs";
 import path from "path";
+import axios from "axios";
 
 //Services
 import userService from "../service/userService";
@@ -1190,6 +1191,137 @@ const createUserWithSharesAndTransaction = async (
   }
 };
 
+const vippsLogin = async (req: Request, res: Response) => {
+  const state = Math.random().toString(36).substring(7); // Generate random state
+  const scopes = ["openid", "address", "email", "phoneNumber"];
+
+  const baseURL =
+    process.env.NODE_ENV === "production"
+      ? "https://api.vipps.no/access-management-1.0/access/oauth2/auth"
+      : "https://apitest.vipps.no/access-management-1.0/access/oauth2/auth";
+
+  const redirectURL =
+    `https://api.vipps.no/access-management-1.0/access/oauth2/auth?client_id=${encodeURIComponent(
+      process.env.CLIENT_ID!
+    )}` +
+    `&response_type=code` +
+    `&scope=${encodeURIComponent(scopes.join(" "))}` +
+    `&state=${state}` +
+    `&redirect_uri=${process.env.REDIRECT_URI!}`;
+
+  console.log(redirectURL);
+
+  res.redirect(redirectURL);
+};
+
+const vippsCallback = async (req: Request, res: Response) => {
+  const { code } = req.query;
+  const auth = Buffer.from(
+    `${process.env.CLIENT_ID}:${process.env.CLIENT_SECRET}`
+  ).toString("base64");
+
+  const baseURL =
+    process.env.NODE_ENV === "production"
+      ? "https://api.vipps.no/access-management-1.0/access/oauth2/token"
+      : "https://apitest.vipps.no/access-management-1.0/access/oauth2/token";
+
+  // Log environment variables for debugging
+  console.log("Authorization code:", code);
+  console.log("Subscription Key:", process.env.SUBSCRIPTION_KEY);
+  console.log("Client ID:", process.env.CLIENT_ID);
+  console.log("Merchant Serial Number:", process.env.MSN);
+  console.log("Redirect URI:", process.env.REDIRECT_URI);
+  console.log("Basic Buffer:", auth);
+
+  try {
+    const response = await axios.post(
+      "https://api.vipps.no/access-management-1.0/access/oauth2/token",
+      new URLSearchParams({
+        grant_type: "authorization_code",
+        code: code as string,
+        redirect_uri: process.env.REDIRECT_URI,
+      }),
+      {
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "Merchant-Serial-Number": process.env.MSN,
+          "Vipps-System-Name": "acme",
+          "Vipps-System-Version": "3.1.2",
+          "Vipps-System-Plugin-Name": "acme-webshop",
+          "Vipps-System-Plugin-Version": "4.5.6",
+        },
+        auth: {
+          username: process.env.CLIENT_ID,
+          password: process.env.CLIENT_SECRET,
+        },
+      }
+    );
+    // Handle the response accordingly
+
+    if (response.data.access_token) {
+      const { access_token } = response.data;
+
+      const userInfoResponse = await axios.get(
+        "https://api.vipps.no/vipps-userinfo-api/userinfo",
+        {
+          headers: {
+            Authorization: `Bearer ${access_token}`, // Use Bearer instead of Basic
+            "Ocp-Apim-Subscription-Key": process.env.SUBSCRIPTION_KEY!,
+            "Merchant-Serial-Number": process.env.MSN!,
+            "Vipps-System-Name": "acme",
+            "Vipps-System-Version": "3.1.2",
+            "Vipps-System-Plugin-Name": "acme-webshop",
+            "Vipps-System-Plugin-Version": "4.5.6",
+          },
+        }
+      );
+
+      res.json(userInfoResponse.data);
+    } else {
+      console.error("Access token not found in response");
+      return res
+        .status(500)
+        .json({ success: false, message: "Error exchanging code for token" });
+    }
+  } catch (error) {
+    console.error("Error exchanging code for token:", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Error exchanging code for token" });
+  }
+};
+
+const vippsUserInfo = async (req: Request, res: Response) => {
+  const { access_token } = req.body;
+
+  const baseURL =
+    process.env.NODE_ENV === "production"
+      ? "https://api.vipps.no/vipps-userinfo-api/userinfo"
+      : "https://apitest.vipps.no/vipps-userinfo-api/userinfo";
+
+  const response = await axios.get(baseURL, {
+    headers: {
+      "Content-Type": "application/json",
+      "Ocp-Apim-Subscription-Key": process.env.SUBSCRIPTION_KEY,
+      "Merchant-Serial-Number": process.env.MSN,
+      "Vipps-System-Name": "acme",
+      "Vipps-System-Version": "3.1.2",
+      "Vipps-System-Plugin-Name": "acme-webshop",
+      "Vipps-System-Plugin-Version": "4.5.6",
+    },
+    auth: {
+      username: process.env.CLIENT_ID,
+      password: process.env.CLIENT_SECRET,
+    },
+  });
+
+  res.status(200).json({
+    success: true,
+    message: "User info retrieved",
+    data: response.data,
+  });
+};
+
 export default {
   createUser,
   getUser,
@@ -1202,4 +1334,7 @@ export default {
   resetPassword,
   getNotifications,
   createUserWithSharesAndTransaction,
+  vippsLogin,
+  vippsCallback,
+  vippsUserInfo,
 };

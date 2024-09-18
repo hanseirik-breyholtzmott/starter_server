@@ -1,31 +1,35 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { Schema, Document } from "mongoose";
+import { v4 as uuidv4 } from "uuid";
 
 export interface IProduct extends Document {
+  productId: string;
   name: string;
   description: string;
   price: number;
+  surcharge: number;
   category: string;
   stock: number; // Number of items available in stock
   imageUrl: string;
-  createdAt: Date;
-  updatedAt: Date;
 }
 
-const ProductSchema: Schema = new Schema<IProduct>({
-  name: { type: String, required: true },
-  description: { type: String, required: true },
-  price: { type: Number, required: true },
-  category: { type: String, required: true },
-  stock: { type: Number, required: true, default: 0 },
-  imageUrl: { type: String, required: false },
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now }
-});
+export interface IProductModel extends IProduct, Document {}
 
-ProductSchema.pre<IProduct>('save', function (next) {
-  this.updatedAt = new Date();
-  next();
-});
+const ProductSchema: Schema = new Schema<IProduct>(
+  {
+    productId: {
+      type: Schema.Types.String,
+      unique: true,
+      default: () => uuidv4(),
+    },
+    name: { type: String, required: true },
+    description: { type: String, required: true },
+    price: { type: Number, required: true },
+    surcharge: { type: Number, required: true, default: 0 },
+    category: { type: String, required: true },
+    stock: { type: Number, required: true, default: 0 },
+    imageUrl: { type: String, required: false },
+  },
+  { timestamps: true }
+);
 
-const Product = mongoose.model<IProduct>('Product', ProductSchema);
-export default Product;
+export default mongoose.model<IProductModel>("Product", ProductSchema);
