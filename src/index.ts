@@ -51,7 +51,7 @@ app.use(
       }
     },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // Allowed HTTP methods
-    allowedHeaders: ["Content-Type", "Authorization", "X-User-ID"], // Allowed headers
+    allowedHeaders: ["Content-Type", "Authorization"], // Allowed headers
     credentials: true, // Allow cookies or authentication headers
     exposedHeaders: ["Access-Control-Allow-Origin"], // Expose the CORS header
   })
