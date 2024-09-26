@@ -86,7 +86,7 @@ class CampaignController {
               actionText: "Du vil få i aksjer ",
               boldText: "1 000kr",
               description:
-                "Lorem ipsum dolor sit amet consectetur, adipisicing elit. Dolore voluptas vitae incidunt.",
+                "Alle kunder får 1 000kr for kundefoldet, vi oppforder aller invester til å bli kunde hos oss.",
               button: {
                 text: "Bli kunde",
                 link: process.env.CLIENT_BASE_URL + "/bestill",
@@ -97,18 +97,18 @@ class CampaignController {
               actionText: "Du vil få i aksjer ",
               boldText: "300kr",
               description:
-                "Lorem ipsum dolor sit amet consectetur, adipisicing elit. Dolore voluptas vitae incidunt.",
+                "Her får du en unik mulighet til å få 300kr i verv for hver person du referer til Folkekraft.",
               button: {
                 text: "Verve lenke",
-                link: process.env.CLIENT_BASE_URL + "folkekraft/portfolio",
+                link: process.env.CLIENT_BASE_URL + "/folkekraft/portfolio",
               },
             },
             {
               title: "Investor tilbud",
               actionText: "Du vil få i aksjer ",
-              boldText: "300kr",
+              boldText: "10 000kr",
               description:
-                "Lorem ipsum dolor sit amet consectetur, adipisicing elit. Dolore voluptas vitae incidunt.",
+                "Investerer du 10 000kr eller mer i Folkekraft får du vår strøm til 0kr månedsbeløp og 0kr i påslag.",
               button: {
                 text: "Investor tilbud",
                 link: process.env.CLIENT_BASE_URL + "/folkekraft/invest",
@@ -214,13 +214,13 @@ class CampaignController {
           title: "6 800 kr",
           value: 850,
           description:
-            "Lorem ipsum dolor sit amet consectetur adipisicing elit. Quasi, quisquam.",
+            "Dette er det vi ønsker alle våre invester kommer inn med i Folkekraft.",
         },
         {
-          title: "12 000 kr",
-          value: 1500,
+          title: "10 000 kr",
+          value: 1250,
           description:
-            "Lorem ipsum dolor sit amet consectetur adipisicing elit. Quasi, quisquam.",
+            "Investerer du 10 000kr eller mer i Folkekraft får du vår strøm til 0kr månedsbeløp og 0kr i påslag.",
         },
       ],
       terms: [
