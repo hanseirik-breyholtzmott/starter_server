@@ -21,6 +21,8 @@ import authRoutes from "./router/authRoutes";
 import transactionRoutes from "./router/transactionRouter";
 import shareRoutes from "./router/shareRoutes";
 import campaignRoutes from "./router/campaignRoutes";
+import affiliateRoutes from "./router/affiliateRoutes";
+import electricityContractRoutes from "./router/electricityContractRoutes";
 
 import router from "./router";
 
@@ -49,7 +51,7 @@ app.use(
       }
     },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // Allowed HTTP methods
-    allowedHeaders: ["Content-Type", "Authorization"], // Allowed headers
+    allowedHeaders: ["Content-Type", "Authorization", "X-User-ID"], // Allowed headers
     credentials: true, // Allow cookies or authentication headers
     exposedHeaders: ["Access-Control-Allow-Origin"], // Expose the CORS header
   })
@@ -78,9 +80,11 @@ app.use("/", authRoutes);
 app.use("/", transactionRoutes);
 app.use("/", shareRoutes);
 app.use("/", campaignRoutes);
+app.use("/", affiliateRoutes);
+app.use("/", electricityContractRoutes);
 
 // Healthcheck Route
-app.get("/healthcheck", (req, res) => {
+app.get("/healthcheck", async (req, res) => {
   return res.send("you are healthy");
 });
 

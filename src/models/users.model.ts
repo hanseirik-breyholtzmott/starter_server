@@ -5,9 +5,9 @@ import { v4 as uuidv4 } from "uuid"; // Assuming you're using UUIDs for unique I
 export interface IAddress {
   street: string | null;
   city: string | null;
-  state: string | null;
+  state?: string | null;
   postalCode: string | null;
-  country: string | null;
+  country?: string | null;
   additionalInfo?: string | null;
 }
 
@@ -61,36 +61,34 @@ export interface IRole {
 
 // Define the IUser interface
 export interface IUser {
-  user_id: string;
+  user_id?: string;
   ssn: string | null;
   firstName: string | null;
   lastName: string | null;
   fullName: string | null;
   //ownedHoldingCompanies: Schema.Types.String[];
   //username: string | null;
-  hasImage: boolean;
-  imageUrl: string | null;
-  address: IAddress | null;
-  primaryEmailAddress: string | null;
+  hasImage?: boolean;
+  imageUrl?: string | null;
+  address?: IAddress | null;
+  primaryEmailAddress: string;
   emailAddresses: Array<string>;
   primaryPhoneNumber: string | null;
   phoneNumbers: Array<string>;
   hasVerifiedPhoneNumber: boolean;
-  hasVerifiedPrimaryEmailAddress: boolean;
-  passwordEnabled: boolean;
+  hasVerifiedPrimaryEmailAddress?: boolean;
+  passwordEnabled?: boolean;
   password: string;
-  resetPasswordToken: string | null;
-  resetPasswordExpiresAt: Date | null;
-  verificationToken: string | null;
-  verificationTokenExpiresAt: Date | null;
-  deleteSelfEnabled: boolean;
-  stripeCustomerId: string | null;
+  resetPasswordToken?: string | null;
+  resetPasswordExpiresAt?: Date | null;
+  verificationToken?: string | null;
+  verificationTokenExpiresAt?: Date | null;
+  deleteSelfEnabled?: boolean;
+  stripeCustomerId?: string | null;
   roles: IRole[];
-  recommendedShares: number;
-  purchaseRight: number;
-  lastSignInAt: Date;
-  createdAt: Date;
-  updatedAt: Date;
+  recommendedShares?: number;
+  purchaseRight?: number;
+  lastSignInAt?: Date;
 }
 
 // Define the IUserModel interface, extending IUser and Document
@@ -140,6 +138,7 @@ const UsersSchema = new Schema(
       type: Schema.Types.Boolean,
       default: false,
     },
+    affiliateDetails: { type: Schema.Types.ObjectId, ref: "Affiliate" }, ////Add this to types
     passwordEnabled: { type: Schema.Types.Boolean, default: false },
     password: { type: Schema.Types.String, required: true },
     resetPasswordToken: { type: Schema.Types.String, default: null },

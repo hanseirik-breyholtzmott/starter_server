@@ -34,8 +34,8 @@ const purchaseShares = async (req: Request, res: Response) => {
     //Create a notification
     const notification = await notificationService.createNotification(
       user.user_id,
-      `You have bought ${numberOfShares} shares.`,
-      `You have bought ${numberOfShares} shares for ${purchasePrice} kr.`,
+      `Du har kjøpt ${numberOfShares} aksjer.`,
+      `Du har kjøpt ${numberOfShares} akjser for ${purchasePrice} kr.`,
       "info"
     );
 

@@ -13,6 +13,8 @@ import notificationService from "../service/notificationService";
 import emailService from "../service/emailService";
 import errorService from "../service/errorService";
 import transactionService from "../service/transactionService";
+import sharesService from "../service/shareService";
+import affiliateService from "../service/affiliateService";
 
 //Models
 import UsersModel, { IUser } from "../models/users.model";
@@ -21,7 +23,6 @@ import TransactionModel, { ITransaction } from "../models/transaction.model";
 import SharesModel from "../models/shares.model";
 
 //Types
-import { JwtPayload } from "../types/authTypes";
 
 //Logger
 import { userLogger } from "../logger";
@@ -70,7 +71,7 @@ const createUser = async (req: Request, res: Response) => {
     var newUser = new UsersModel({
       firstName: firstName || null,
       lastName: lastName || null,
-      ssm: ssn,
+      ssn: ssn,
       username: null,
       password: hashedPassword,
       primaryEmailAddress: email,
@@ -1322,6 +1323,88 @@ const vippsUserInfo = async (req: Request, res: Response) => {
   });
 };
 
+const getPortfolio = async (req: Request, res: Response) => {
+  const userId = req.params.userId;
+
+  console.log("This is the userId", userId);
+
+  try {
+    const user = await userService.userExists(userId);
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "User not found.",
+      });
+    }
+
+    //Check if user has an affiliate
+
+    //if not create one
+
+    let affiliate = await affiliateService.getAffiliateByUserId(userId);
+    if (!affiliate) {
+      affiliate = await affiliateService.createAffiliate(userId);
+    }
+
+    const referralLink = `${process.env.CLIENT_BASE_URL}/bestill?ref=${affiliate.affiliateCode}`;
+
+    //count the share that are locked
+    const lockedShares = await sharesService.sumLockedSharesByUserId(userId);
+
+    //count the shares that are referral bonus
+    const referralBonusShares =
+      await sharesService.sumReferralBonusSharesByUserId(userId);
+
+    //count the shares that are not referral bonus and not locked
+    const activeNonReferralShares =
+      await sharesService.sumActiveNonReferralSharesByUserId(userId);
+
+    const transactions = await transactionService.getTransactionsByUserId(
+      userId
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        totalInvested: activeNonReferralShares * 8, // Total amount invested by the user
+        totalShares: activeNonReferralShares, // Total number of shares owned by the user
+        currentValue: {
+          totalAmount:
+            activeNonReferralShares * 8 +
+            referralBonusShares * 12 +
+            lockedShares * 12, // Total current value of all shares
+          percentageChange: 0, // Percentage change in value from initial investment
+        },
+        investments: {
+          totalShares: activeNonReferralShares, // Total number of shares acquired from investments
+          totalValue: activeNonReferralShares * 8, // Total current value of those shares
+          customerShares: {
+            total: lockedShares / 84, // Total number of shares owned directly by the customer
+            shares: lockedShares,
+            value: lockedShares * 12, // Current value of the customer shares
+          },
+          referralShares: {
+            total: referralBonusShares / 25, // Total shares acquired from referrals
+            shares: referralBonusShares,
+            value: referralBonusShares * 12, // Current value of referral-acquired shares
+          },
+        },
+        portfolioSummary: {
+          investorSharesValue: activeNonReferralShares * 8, // Total value of investor-acquired shares
+          customerSharesValue: lockedShares * 12, // Total value of customer-owned shares
+          referralSharesValue: referralBonusShares * 12, // Total value of shares acquired from referrals
+          accountDetails: [], // Array of account data for further details
+        },
+        referralLink: referralLink,
+        transactions: transactions, // Array to hold user transaction details
+      },
+    });
+  } catch (error) {
+    errorService.handleServerError(res, error, "Server error");
+  }
+};
+
 export default {
   createUser,
   getUser,
@@ -1337,4 +1420,5 @@ export default {
   vippsLogin,
   vippsCallback,
   vippsUserInfo,
+  getPortfolio,
 };

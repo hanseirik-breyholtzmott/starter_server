@@ -13,6 +13,7 @@ export interface IAffiliate {
   referrals: IReferral[];
   totalReferrals: number;
   totalCompletedReferrals: number;
+  totalSharesEarned: number;
 }
 
 export interface IAffiliateModel extends IAffiliate, Document {}
@@ -26,6 +27,9 @@ const AffiliateSchema: Schema = new Schema(
       unique: true,
     },
     affiliateCode: { type: Schema.Types.String, required: true },
+    totalReferrals: { type: Number, default: 0 },
+    totalCompletedReferrals: { type: Number, default: 0 },
+    totalSharesEarned: { type: Number, default: 0 },
     referrals: [
       {
         referredUserId: { type: Schema.Types.String, ref: "Users" },
@@ -35,10 +39,10 @@ const AffiliateSchema: Schema = new Schema(
           enum: ["pending", "completed", "cancelled"],
           default: "pending",
         },
+        earnedShares: { type: Number, default: 0 },
+        //TODO: Earned rewards
       },
     ],
-    totalReferrals: { type: Number, default: 0 },
-    totalCompletedReferrals: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

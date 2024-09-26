@@ -1,7 +1,10 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
+
+//Models
 import { IUserModel } from "./users.model";
 import { ISubscription } from "./subscription.model";
 
+//Types
 interface IProduct {
   productId: Types.ObjectId;
   quantity: number;
@@ -9,8 +12,8 @@ interface IProduct {
 }
 
 export interface ITransaction {
-  userId: string | IUserModel;
-  stripePaymentId: string;
+  userId: string;
+  stripePaymentId?: string;
   paymentMethod:
     | "credit_card"
     | "paypal"
@@ -18,11 +21,17 @@ export interface ITransaction {
     | "crypto"
     | "cash"
     | "other";
-  transactionType: "subscription" | "product" | "shares";
-  subscription?: string | ISubscription;
+  transactionType:
+    | "subscription"
+    | "product"
+    | "shares"
+    | "referral_bonus"
+    | string;
+  relatedShareId?: Types.ObjectId;
+  subscription?: Types.ObjectId | ISubscription;
   products?: IProduct[];
   amount: number;
-  currency: string;
+  currency: "USD" | "EUR" | "NOK" | "GBP";
   status: "pending" | "paid" | "failed" | "refunded";
   taxAmount: number;
   taxRate: number;
@@ -33,18 +42,18 @@ export interface ITransaction {
 
 export interface ITransactionModel extends ITransaction, Document {}
 
-const TransactionSchema: Schema = new Schema<ITransaction>(
+const TransactionSchema: Schema<ITransactionModel> = new Schema(
   {
-    userId: { type: Schema.Types.String, ref: "Users", required: true },
+    userId: { type: Schema.Types.String, ref: "User", required: true },
     stripePaymentId: {
       type: Schema.Types.String,
-      required: true,
+      //required: true,
       //unique: true,
     },
     transactionType: {
       type: Schema.Types.String,
       required: true,
-      enum: ["subscription", "product", "shares"],
+      enum: ["subscription", "product", "shares", "referral_bonus"],
     },
     paymentMethod: {
       type: Schema.Types.String,
@@ -56,24 +65,29 @@ const TransactionSchema: Schema = new Schema<ITransaction>(
         "cash",
         "other",
       ],
-      required: true,
+      //required: true,
     },
+    relatedShareId: { type: Schema.Types.ObjectId, ref: "Shares" },
     subscription: {
       type: Schema.Types.ObjectId,
       ref: "Subscription",
       validate: {
-        validator: function () {
-          return this.transactionType === "subscription";
+        validator: function (this: ITransactionModel) {
+          return this.transactionType !== "subscription" || !!this.subscription;
         },
         message: "Subscription field is required for subscription transactions",
       },
     },
     products: {
       type: [
-        { productId: Schema.Types.ObjectId, quantity: Number, price: Number },
+        {
+          productId: { type: Schema.Types.ObjectId, ref: "Product" },
+          quantity: { type: Number, required: true },
+          price: { type: Number, required: true },
+        },
       ],
       validate: {
-        validator: function (this: ITransaction) {
+        validator: function (this: ITransactionModel) {
           return (
             this.transactionType !== "product" ||
             (this.products && this.products.length > 0)
@@ -90,8 +104,8 @@ const TransactionSchema: Schema = new Schema<ITransaction>(
     currency: {
       type: Schema.Types.String,
       required: true,
-      default: "NOK",
       enum: ["USD", "EUR", "NOK", "GBP"],
+      default: "NOK",
     },
     status: {
       type: Schema.Types.String,

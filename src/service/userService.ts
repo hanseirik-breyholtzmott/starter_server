@@ -4,14 +4,14 @@ import bcrypt from "bcrypt";
 //Models
 import UsersModel, { IUser, IUserModel } from "../models/users.model";
 
-const createUser = async (user: IUser): Promise<IUserModel | boolean> => {
+const createUser = async (user: IUser): Promise<IUserModel | null> => {
   //Validate user info using joi
 
   //check if email exists
   const isEmailTaken = await emailExists(user.primaryEmailAddress);
 
   if (isEmailTaken) {
-    return false;
+    return null;
   }
 
   //check if ssn exists
