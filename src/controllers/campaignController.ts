@@ -105,7 +105,7 @@ class CampaignController {
             },
             {
               title: "Verve 5: Få strøm til kostpris",
-              actionText: "Få strøm til vår innkjøpspris i 1 år",
+              actionText: "Få strøm til vår innkjøpspris i ett år",
               boldText: "",
               description:
                 "Du får 5.000 kr i aksjeverdi og strøm til vår innkjøpspris i ett år.",

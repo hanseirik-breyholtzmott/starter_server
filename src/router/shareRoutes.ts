@@ -5,7 +5,6 @@ import userController from "../controllers/userController";
 import shareController from "../controllers/shareController";
 
 //Middleware
-import validateUser from "../middleware/validateUser";
 
 const router = express.Router();
 

@@ -4,7 +4,6 @@ import express from "express";
 import { transactionController } from "../controllers/transacationController";
 
 //Middleware
-import validateUser from "../middleware/validateUser";
 
 const router = express.Router();
 

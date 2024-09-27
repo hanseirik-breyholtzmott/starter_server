@@ -5,7 +5,6 @@ import campaignController from "../controllers/campaignController";
 import userController from "../controllers/userController";
 
 //Middleware
-import validateUser from "../middleware/validateUser";
 
 const router = express.Router();
 
