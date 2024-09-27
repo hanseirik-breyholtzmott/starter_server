@@ -4,7 +4,6 @@ import express from "express";
 import userController from "../controllers/userController";
 
 //Middleware
-import validateUser from "../middleware/validateUser";
 
 const router = express.Router();
 

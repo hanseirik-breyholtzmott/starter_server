@@ -82,36 +82,47 @@ class CampaignController {
           },
           perks: [
             {
-              title: "Bli Folkekraft kunde",
-              actionText: "Du vil få i aksjer ",
-              boldText: "1 000kr",
+              title: "Bli kunde",
+              actionText: "Få 1.000 kr i aksjeverdi i Folkekraft.",
+              boldText: "",
               description:
-                "Alle kunder får 1 000kr for kundefoldet, vi oppforder aller invester til å bli kunde hos oss.",
+                "Du får en av Norges billigste strømavtaler og støtter selskapet du er med å eie.",
               button: {
                 text: "Bli kunde",
                 link: process.env.CLIENT_BASE_URL + "/bestill",
               },
             },
             {
-              title: "Verv Folkekraft",
-              actionText: "Du vil få i aksjer ",
-              boldText: "300kr",
+              title: "Verve 1: 1.000 kr per verving",
+              actionText: "Få 1.000 kr i aksjer per verving",
+              boldText: "",
               description:
-                "Her får du en unik mulighet til å få 300kr i verv for hver person du referer til Folkekraft.",
+                "Vi øker vervepremien fra 300 kr til 1.000 kr for alle medeiere i kampanjeperioden.",
               button: {
-                text: "Verve lenke",
+                text: "Hente verve lenke",
                 link: process.env.CLIENT_BASE_URL + "/folkekraft/portfolio",
               },
             },
             {
-              title: "Investor tilbud",
-              actionText: "Du vil få i aksjer ",
-              boldText: "10 000kr",
+              title: "Verve 5: Få strøm til kostpris",
+              actionText: "Få strøm til vår innkjøpspris i 1 år",
+              boldText: "",
               description:
-                "Investerer du 10 000kr eller mer i Folkekraft får du vår strøm til 0kr månedsbeløp og 0kr i påslag.",
+                "Du får 5.000 kr i aksjeverdi og strøm til vår innkjøpspris i ett år.",
               button: {
-                text: "Investor tilbud",
-                link: process.env.CLIENT_BASE_URL + "/folkekraft/invest",
+                text: "Hente verve lenke",
+                link: process.env.CLIENT_BASE_URL + "/folkekraft/portfolio",
+              },
+            },
+            {
+              title: "Verve 10: Vinn 100.000 kr i aksjer",
+              actionText: "Bli med i trekningen av 100.000 kr i aksjeverdi!",
+              boldText: "",
+              description:
+                "Alle som verver 10 får 10.000 kr i vervepremie og er med i trekning av 100.000 kr i aksjer.",
+              button: {
+                text: "Hente verve lenke",
+                link: process.env.CLIENT_BASE_URL + "/folkekraft/portfolio",
               },
             },
           ],
