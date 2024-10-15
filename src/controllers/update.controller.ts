@@ -14,10 +14,6 @@ import shareTransactionService from "../service/shareTransaction.service";
 import userService from "../service/user.service";
 
 async function updateSystems(req: Request, res: Response) {
-  const session = await startSession();
-
-  session.startTransaction();
-
   //Update shares model
   const shares = await ShareModel.find({});
 
@@ -107,8 +103,6 @@ async function updateSystems(req: Request, res: Response) {
   //Update transactions
 
   // Commit the transaction
-  await session.commitTransaction();
-  session.endSession();
 
   return res.status(200).json({
     message: "Systems updated",
