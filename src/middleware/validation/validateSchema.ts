@@ -6,6 +6,7 @@ import { BAD_REQUEST } from "../../utils/contants";
 export const validateSchema = (schema: ZodSchema<any>) => {
   return (req: Request, res: Response, next: NextFunction) => {
     try {
+      console.log("req.body", req.body);
       schema.parse(req.body);
       next();
     } catch (error) {
