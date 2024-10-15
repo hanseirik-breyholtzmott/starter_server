@@ -32,7 +32,16 @@ export default (): express.Router => {
   router.use(express.urlencoded({ extended: true }));
   router.use(
     cors({
-      origin: "http://localhost:3000",
+      origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.indexOf(origin) === -1) {
+          var msg =
+            "The CORS policy for this site does not allow access from the specified Origin.";
+          return callback(new Error(msg), false);
+        }
+        return callback(null, true);
+      },
       methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // Allowed HTTP methods
       allowedHeaders: ["Content-Type", "Authorization"], // Allowed headers
       credentials: true, // Allow cookies or authentication headers
@@ -62,7 +71,7 @@ export default (): express.Router => {
     console.log("healthcheck");
     return res.send("you are healthy");
   });
-
+  /*
   router.get("/createCompany", updateController.createCompany); //Works
   router.get("/createCampaign", updateController.createCampaign); //Works
   router.get("/update", updateController.updateSystems);
@@ -73,7 +82,7 @@ export default (): express.Router => {
   ); //Works
 
   router.get("/checkShareUser", updateController.checkShareUser); //Works
-
+ */
   router.get("/test", async (req, res) => {
     return res.status(200).json({ message: "test" });
   });
