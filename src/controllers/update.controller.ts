@@ -37,9 +37,9 @@ async function updateSystems(req: Request, res: Response) {
     }
 
     var updatedFields = {
-      companyId: new Types.ObjectId("670e671ecbcbc440be62fa88"),
+      companyId: new Types.ObjectId("670edea8e7287630bb8a389a"),
       userId: user._id as Types.ObjectId,
-      shareClassId: new Types.ObjectId("670e671ecbcbc440be62fa8a"),
+      shareClassId: new Types.ObjectId("670edea9e7287630bb8a389d"),
       identifier: share.ssn
         ? share.ssn.length === 11
           ? {
