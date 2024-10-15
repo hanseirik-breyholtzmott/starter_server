@@ -183,7 +183,7 @@ async function createCompany(req: Request, res: Response) {
 }
 
 async function createCampaign(req: Request, res: Response) {
-  const company = await CompanyModel.findById("670e671ecbcbc440be62fa88");
+  const company = await CompanyModel.findById("670edea8e7287630bb8a389a");
   //Create campaign
 
   const newCampaign = {
@@ -197,7 +197,7 @@ async function createCampaign(req: Request, res: Response) {
     investmentDetails: {
       minimumInvestment: 2400,
       maximumInvestment: 1000000,
-      shareClassId: new Types.ObjectId("670e671ecbcbc440be62fa8a"),
+      shareClassId: new Types.ObjectId("670edea9e7287630bb8a389d"),
       sharePrice: 8,
       startDate: new Date("2024-09-01"),
       closingDate: new Date("2024-10-18"),
