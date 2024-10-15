@@ -102,10 +102,16 @@ const login = async (req: Request, res: Response) => {
 
   try {
     const result = await authService.loginUser(email, password);
-
     return res.status(OK).json(result);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error("Login error:", error);
+    userLogger.error("Error during login", { error: error.message, email });
+    return res.status(INTERNAL_SERVER_ERROR).json({
+      status: INTERNAL_SERVER_ERROR,
+      success: false,
+      message: "An error occurred during login",
+      error: error.message,
+    });
   }
 };
 

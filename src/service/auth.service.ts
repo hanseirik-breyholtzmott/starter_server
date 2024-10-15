@@ -145,67 +145,76 @@ const loginUser = async (
   email: string,
   password: string
 ): Promise<LoginResponse> => {
-  const user = await userService.getUserByEmail(email);
+  try {
+    const user = await userService.getUserByEmail(email);
 
-  if (!user) {
-    userLogger.warn("User not found", { email: email });
-    return {
-      status: UNAUTHORIZED,
-      message: "Email does not exist.",
-      success: false,
-      user: null,
-    };
-  }
+    if (!user) {
+      userLogger.warn("User not found", { email: email });
+      return {
+        status: UNAUTHORIZED,
+        message: "Email does not exist.",
+        success: false,
+        user: null,
+      };
+    }
 
-  const isPasswordCorrect = await compareValue(password, user.password);
+    const isPasswordCorrect = await compareValue(password, user.password);
 
-  if (!isPasswordCorrect) {
-    userLogger.warn("Incorrect password", { email: email });
-    return {
-      status: UNAUTHORIZED,
-      message: "Incorrect password.",
-      success: false,
-      user: null,
-    };
-  }
+    if (!isPasswordCorrect) {
+      userLogger.warn("Incorrect password", { email: email });
+      return {
+        status: UNAUTHORIZED,
+        message: "Incorrect password.",
+        success: false,
+        user: null,
+      };
+    }
 
-  // Update user's last login time
-  user.lastSignInAt = new Date();
-  await user.save();
+    // Update user's last login time
+    user.lastSignInAt = new Date();
+    await user.save();
 
-  // Create a new session
-  const session = await sessionService.createSession(user._id as string);
+    // Create a new session
+    const session = await sessionService.createSession(user._id as string);
 
-  // Create access token
-  const accessToken = signToken({
-    userId: user._id.toString(),
-    sessionId: session._id.toString(),
-  });
-
-  // Create refresh token
-  const refreshToken = signToken(
-    {
+    // Create access token
+    const accessToken = signToken({
+      userId: user._id.toString(),
       sessionId: session._id.toString(),
-    },
-    refreshTokenOptions
-  );
+    });
 
-  userLogger.info("User logged in successfully", {
-    userId: user._id,
-    email: user.primaryEmailAddress,
-  });
+    // Create refresh token
+    const refreshToken = signToken(
+      {
+        sessionId: session._id.toString(),
+      },
+      refreshTokenOptions
+    );
 
-  return {
-    status: OK,
-    message: "User logged in successfully",
-    success: true,
-    accessToken,
-    refreshToken,
-    user: {
-      ...user.toObject(),
-      _id: user._id.toString(),
-    },
-  };
+    userLogger.info("User logged in successfully", {
+      userId: user._id,
+      email: user.primaryEmailAddress,
+    });
+
+    return {
+      status: OK,
+      message: "User logged in successfully",
+      success: true,
+      accessToken,
+      refreshToken,
+      user: {
+        ...user.toObject(),
+        _id: user._id.toString(),
+      },
+    };
+  } catch (error) {
+    console.error("Error in loginUser:", error);
+    userLogger.error("Unexpected error in loginUser", {
+      error: error.message,
+      email,
+    });
+    throw error; // Re-throw the error to be caught in the controller
+  }
 };
 
 //Verify email
