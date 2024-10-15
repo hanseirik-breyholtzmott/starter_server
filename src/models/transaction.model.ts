@@ -1,18 +1,8 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
 
-//Models
-import { IUserModel } from "./users.model";
-import { ISubscription } from "./subscription.model";
-
 //Types
-interface IProduct {
-  productId: Types.ObjectId;
-  quantity: number;
-  price: number;
-}
-
 export interface ITransaction {
-  userId: string;
+  userId: Types.ObjectId;
   stripePaymentId?: string;
   paymentMethod:
     | "credit_card"
@@ -24,36 +14,43 @@ export interface ITransaction {
   transactionType:
     | "subscription"
     | "product"
-    | "shares"
+    | "shares_purchase"
+    | "shares_sale"
     | "referral_bonus"
     | string;
-  relatedShareId?: Types.ObjectId;
-  subscription?: Types.ObjectId | ISubscription;
-  products?: IProduct[];
   amount: number;
   currency: "USD" | "EUR" | "NOK" | "GBP";
   status: "pending" | "paid" | "failed" | "refunded";
   taxAmount: number;
   taxRate: number;
-  discount: number;
+  discount?: number;
   metadata?: Map<string, string>;
+  shareTransactionId?: Types.ObjectId;
   transactionDate: Date;
 }
 
-export interface ITransactionModel extends ITransaction, Document {}
+export interface ITransactionModel extends ITransaction, Document {
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 const TransactionSchema: Schema<ITransactionModel> = new Schema(
   {
-    userId: { type: Schema.Types.String, ref: "User", required: true },
+    userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     stripePaymentId: {
       type: Schema.Types.String,
-      //required: true,
-      //unique: true,
+      sparse: true, // Allows multiple null values but ensures uniqueness for non-null values
     },
     transactionType: {
       type: Schema.Types.String,
       required: true,
-      enum: ["subscription", "product", "shares", "referral_bonus"],
+      enum: [
+        "subscription",
+        "product",
+        "shares_purchase",
+        "shares_sale",
+        "referral_bonus",
+      ],
     },
     paymentMethod: {
       type: Schema.Types.String,
@@ -65,36 +62,7 @@ const TransactionSchema: Schema<ITransactionModel> = new Schema(
         "cash",
         "other",
       ],
-      //required: true,
-    },
-    relatedShareId: { type: Schema.Types.ObjectId, ref: "Shares" },
-    subscription: {
-      type: Schema.Types.ObjectId,
-      ref: "Subscription",
-      validate: {
-        validator: function (this: ITransactionModel) {
-          return this.transactionType !== "subscription" || !!this.subscription;
-        },
-        message: "Subscription field is required for subscription transactions",
-      },
-    },
-    products: {
-      type: [
-        {
-          productId: { type: Schema.Types.ObjectId, ref: "Product" },
-          quantity: { type: Number, required: true },
-          price: { type: Number, required: true },
-        },
-      ],
-      validate: {
-        validator: function (this: ITransactionModel) {
-          return (
-            this.transactionType !== "product" ||
-            (this.products && this.products.length > 0)
-          );
-        },
-        message: "Products field is required for product transactions",
-      },
+      required: true,
     },
     amount: {
       type: Schema.Types.Number,
@@ -128,10 +96,23 @@ const TransactionSchema: Schema<ITransactionModel> = new Schema(
       min: [0, "Discount must be positive"],
     },
     metadata: { type: Map, of: String },
-    transactionDate: { type: Date, default: Date.now },
+    shareTransactionId: {
+      type: Schema.Types.ObjectId,
+      ref: "ShareTransaction",
+    },
+    transactionDate: {
+      // Added this field
+      type: Schema.Types.Date,
+      required: true,
+      default: Date.now,
+    },
   },
   { timestamps: true }
 );
+
+TransactionSchema.index({ userId: 1, createdAt: -1 });
+TransactionSchema.index({ transactionType: 1 });
+TransactionSchema.index({ status: 1 });
 
 export default mongoose.model<ITransactionModel>(
   "Transaction",

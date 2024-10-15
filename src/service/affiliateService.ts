@@ -1,6 +1,6 @@
 //Models
 import AffiliateModel, { IAffiliateModel } from "../models/affiliate.model";
-import ShareModel from "../models/shares.model";
+import ShareModel from "../models/share.model";
 import UserModel from "../models/users.model";
 
 //Utils

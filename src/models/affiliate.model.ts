@@ -1,14 +1,14 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema, Document, Types } from "mongoose";
 import { IUserModel } from "./users.model";
 
 export interface IReferral {
-  referredUserId: string | IUserModel;
+  referredUserId: Types.ObjectId;
   referredDate: Date;
   status: "pending" | "completed" | "cancelled";
 }
 
 export interface IAffiliate {
-  userId: string | IUserModel;
+  userId: Types.ObjectId;
   affiliateCode: string;
   referrals: IReferral[];
   totalReferrals: number;
@@ -21,7 +21,7 @@ export interface IAffiliateModel extends IAffiliate, Document {}
 const AffiliateSchema: Schema = new Schema(
   {
     userId: {
-      type: Schema.Types.String,
+      type: Schema.Types.ObjectId,
       ref: "Users",
       required: true,
       unique: true,
@@ -32,14 +32,13 @@ const AffiliateSchema: Schema = new Schema(
     totalSharesEarned: { type: Number, default: 0 },
     referrals: [
       {
-        referredUserId: { type: Schema.Types.String, ref: "Users" },
+        referredUserId: { type: Schema.Types.ObjectId, ref: "Users" },
         referredDate: { type: Date, default: Date.now },
         status: {
           type: String,
           enum: ["pending", "completed", "cancelled"],
           default: "pending",
         },
-        earnedShares: { type: Number, default: 0 },
         //TODO: Earned rewards
       },
     ],

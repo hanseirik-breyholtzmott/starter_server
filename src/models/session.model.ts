@@ -2,17 +2,17 @@ import mongoose, { Schema, Document } from "mongoose";
 import { IUserModel } from "./users.model";
 
 export interface ISessionModel extends Document {
-  userId: string;
+  userId: string | mongoose.Types.ObjectId;
   userAgent?: string;
-  token: string;
+  token?: string;
   expiresAt: Date;
 }
 
 const SessionSchema: Schema = new Schema<ISessionModel>(
   {
-    userId: { type: String, ref: "Users", required: true },
+    userId: { type: Schema.Types.ObjectId, ref: "Users", required: true },
     userAgent: { type: String, required: false },
-    token: { type: String, required: true },
+    token: { type: String, required: false },
     expiresAt: {
       type: Date,
       required: true,

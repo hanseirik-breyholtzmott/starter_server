@@ -61,21 +61,21 @@ export interface IRole {
 
 // Define the IUser interface
 export interface IUser {
+  _id?: string | mongoose.Types.ObjectId;
   user_id?: string;
+  userId?: string;
   ssn: string | null;
   firstName: string | null;
   lastName: string | null;
   fullName: string | null;
-  //ownedHoldingCompanies: Schema.Types.String[];
-  //username: string | null;
   hasImage?: boolean;
   imageUrl?: string | null;
   address?: IAddress | null;
   primaryEmailAddress: string;
   emailAddresses: Array<string>;
-  primaryPhoneNumber: string | null;
-  phoneNumbers: Array<string>;
-  hasVerifiedPhoneNumber: boolean;
+  primaryPhoneNumber?: string | null;
+  phoneNumbers?: Array<string>;
+  hasVerifiedPhoneNumber?: boolean;
   hasVerifiedPrimaryEmailAddress?: boolean;
   passwordEnabled?: boolean;
   password: string;
@@ -92,7 +92,7 @@ export interface IUser {
 }
 
 // Define the IUserModel interface, extending IUser and Document
-export interface IUserModel extends IUser, Document {}
+export interface IUserModel extends Omit<IUser, "_id">, Document {}
 
 //Define the AddressSchema with Mongoose
 const AddressSchema = new Schema({
@@ -107,6 +107,9 @@ const AddressSchema = new Schema({
 const UsersSchema = new Schema(
   {
     user_id: {
+      type: Schema.Types.String,
+    },
+    userId: {
       type: Schema.Types.String,
       unique: true,
       default: () => uuidv4(),

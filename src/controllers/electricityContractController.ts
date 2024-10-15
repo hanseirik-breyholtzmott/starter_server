@@ -2,17 +2,14 @@ import { Request, Response } from "express";
 import bcrypt from "bcrypt";
 
 //Services
-import userService from "../service/userService";
-import shareService from "../service/shareService";
-import transactionService from "../service/transactionService";
+
 import electricityContractService from "../service/electricityContractService";
-import emailService from "../service/emailService";
 
 //Models
 import { IUser } from "../models/users.model";
-import { IShare } from "../models/shares.model";
+import { IShare } from "../models/share.model";
 import { ITransaction } from "../models/transaction.model";
-
+/*
 class ElectricityContractController {
   async createElectricityContract(req: Request, res: Response) {
     console.log("createElectricityContract");
@@ -36,7 +33,7 @@ class ElectricityContractController {
     let user: IUser;
 
     if (existingUser) {
-      user = existingUser;
+      user = existingUser as IUser;
     } else {
       // Generate a random password
       const password = userService.generateRandomPassword();
@@ -74,7 +71,7 @@ class ElectricityContractController {
         return res.status(400).json({ message: "Failed to create user" });
       }
 
-      user = newUser;
+      user = newUser as IUser;
     }
 
     var newAddress = {
@@ -113,7 +110,7 @@ class ElectricityContractController {
     }
 
     // Create shares (locked)
-    const shareData: IShare = {
+    /*const shareData: IShare = {
       userId: user.user_id as string,
       transactionId: newTransaction._id as string,
       numberOfShares: 84,
@@ -164,7 +161,7 @@ class ElectricityContractController {
       console.log("referralUser", referralUser);
 
       // Create shares for referral user (unlocked)
-      const referralShareData: IShare = {
+      /*const referralShareData: IShare = {
         userId: referralUserId,
         transactionId: referralTransaction._id as string,
         numberOfShares: 25,
@@ -184,19 +181,20 @@ class ElectricityContractController {
       }
     }
 
-    //Send email to hei@folkekraft.no
-    await emailService.sendEmail(
-      "Folkekraft Nye kunde <folkekraft@folkekraft.no>",
-      ["hei@folkekraft.no"],
-      "Ny kunde",
-      req.body
-    );
+      //Send email to hei@folkekraft.no
+      await emailService.sendEmail(
+        "Folkekraft Nye kunde <folkekraft@folkekraft.no>",
+        ["hei@folkekraft.no"],
+        "Ny kunde",
+        req.body
+      );
 
-    res.status(200).json({
-      success: true,
-      message: "Electricity contract created successfully",
-    });
+      res.status(200).json({
+        success: true,
+        message: "Electricity contract created successfully",
+      });
+    }
   }
 }
 
-export default new ElectricityContractController();
+//export default new ElectricityContractController();*/

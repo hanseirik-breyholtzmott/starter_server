@@ -61,7 +61,7 @@ winston.loggers.add("DBLogger", {
   defaultMeta: { service: "DatabaseService" },
 });
 
-//Database Logger
+//Middleware Logger
 winston.loggers.add("MiddlewareLogger", {
   level: "info", // Adjust level as necessary
   format: combine(errors({ stack: true }), timestamp(), json()),
@@ -91,9 +91,64 @@ winston.loggers.add("CampaignLogger", {
   defaultMeta: { service: "CampaignService" },
 });
 
+//Email Logger
+winston.loggers.add("EmailLogger", {
+  level: "info",
+  format: combine(errors({ stack: true }), timestamp(), json()),
+  transports: [
+    new winston.transports.Console(),
+    new winston.transports.File({
+      filename: path.join(logsDirectory, "email.log"),
+      level: "info",
+    }),
+    new LogtailTransport(logtail),
+  ],
+  defaultMeta: { service: "EmailService" },
+});
+
+//Session Logger
+winston.loggers.add("SessionLogger", {
+  level: "info",
+  format: combine(errors({ stack: true }), timestamp(), json()),
+  transports: [
+    new winston.transports.Console(),
+    new winston.transports.File({
+      filename: path.join(logsDirectory, "session.log"),
+      level: "info",
+    }),
+    new LogtailTransport(logtail),
+  ],
+  defaultMeta: { service: "SessionService" },
+});
+
+winston.loggers.add("VippsLogger", {
+  level: "info",
+  format: combine(errors({ stack: true }), timestamp(), json()),
+  transports: [
+    new winston.transports.Console(),
+    new winston.transports.File({
+      filename: path.join(logsDirectory, "vipps.log"),
+      level: "info",
+    }),
+    new LogtailTransport(logtail),
+  ],
+  defaultMeta: { service: "VippsService" },
+});
+
 const middlewareLogger = winston.loggers.get("MiddlewareLogger");
 const userLogger = winston.loggers.get("UserLogger");
 const dbLogger = winston.loggers.get("DBLogger");
 const campaignLogger = winston.loggers.get("CampaignLogger");
+const emailLogger = winston.loggers.get("EmailLogger");
+const sessionLogger = winston.loggers.get("SessionLogger");
+const vippsLogger = winston.loggers.get("VippsLogger");
 
-export { userLogger, dbLogger, middlewareLogger, campaignLogger };
+export {
+  userLogger,
+  dbLogger,
+  middlewareLogger,
+  campaignLogger,
+  emailLogger,
+  sessionLogger,
+  vippsLogger,
+};

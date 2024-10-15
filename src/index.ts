@@ -6,8 +6,9 @@ import compression from "compression";
 import cors from "cors";
 import mongoose from "mongoose";
 import session from "express-session";
-import csurf from "csurf";
+//import csurf from "csurf";
 import dotenv from "dotenv";
+import ngrok from "ngrok";
 import {
   responseTimeMiddleware,
   morganMiddleware,
@@ -16,80 +17,20 @@ import { config } from "./config";
 
 dotenv.config();
 
-//Router
-import authRoutes from "./router/authRoutes";
-import transactionRoutes from "./router/transactionRouter";
-import shareRoutes from "./router/shareRoutes";
-import campaignRoutes from "./router/campaignRoutes";
-import affiliateRoutes from "./router/affiliateRoutes";
-import electricityContractRoutes from "./router/electricityContractRoutes";
-
-import router from "./router";
-
-const app = express();
 const SERVER_PORT = process.env.SERVER_PORT
   ? Number(process.env.SERVER_PORT)
   : 5000;
 const SERVER_HOST = process.env.SERVER_HOST;
 
-const allowedOrigins = [
-  "http://localhost:3000", // Development
-  "https://invest.folkekraft.no", // Production
-];
+//Routes
+import router from "./router";
 
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      // Allow requests with no origin (like mobile apps, curl, etc.)
-      if (!origin) return callback(null, true);
-
-      // Check if the origin is in the allowed list
-      if (allowedOrigins.indexOf(origin) !== -1) {
-        callback(null, true); // Origin allowed
-      } else {
-        callback(new Error("Not allowed by CORS")); // Origin not allowed
-      }
-    },
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // Allowed HTTP methods
-    allowedHeaders: ["Content-Type", "Authorization"], // Allowed headers
-    credentials: true, // Allow cookies or authentication headers
-    exposedHeaders: ["Access-Control-Allow-Origin"], // Expose the CORS header
-  })
-);
-
-//Middleware
-app.use(compression());
-app.use(cookieParser());
-app.use(bodyParser.json());
-//app.use(csurf({ cookie: true })); // CSRF protection for all routes
-//Add the csurf to allow other websites to access the backend
-app.use("/", router());
-// Session middleware
-app.use(
-  session({
-    secret: process.env.JWT_SECRET_KEY, // Replace with your actual secret key
-    resave: false,
-    saveUninitialized: true,
-  })
-);
-//app.use(responseTimeMiddleware); // Custom response time tracking middleware
-//app.use(morganMiddleware);       // Morgan request logging middleware
+const app = express();
 
 //Routes
-app.use("/", authRoutes);
-app.use("/", transactionRoutes);
-app.use("/", shareRoutes);
-app.use("/", campaignRoutes);
-app.use("/", affiliateRoutes);
-app.use("/", electricityContractRoutes);
-
-// Healthcheck Route
-app.get("/healthcheck", async (req, res) => {
-  return res.send("you are healthy");
-});
+app.use("/", router());
 
 // Connect to MongoDB using Mongoose
-/** Connect to Mongo */
 mongoose
   .connect(config.mongo.url, { retryWrites: true, w: "majority" })
   .then(() => {
@@ -100,6 +41,19 @@ mongoose
   });
 
 const server = http.createServer(app);
-server.listen(SERVER_PORT, () => {
+server.listen(SERVER_PORT, async () => {
   console.log(`Server running on port: ${SERVER_HOST}:${SERVER_PORT}`);
+
+  // Start ngrok for development mode
+  if (process.env.NODE_ENV === "stage") {
+    try {
+      const url = await ngrok.connect({
+        addr: 5000, // Change this to match the port of your Express server
+        web_addr: "127.0.0.1:4040", // Specify a different port for ngrok's web interface
+      });
+      console.log(`ngrok tunnel available at: ${url}`);
+    } catch (error) {
+      console.error("Error starting ngrok:", error);
+    }
+  }
 });
