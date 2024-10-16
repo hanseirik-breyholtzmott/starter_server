@@ -477,26 +477,9 @@ const vippsCallback = async (req: Request, res: Response) => {
         userId: userInfo.sub,
       });
 
-      res.cookie("session", refreshToken, {
-        httpOnly: true,
-        secure: true,
-        sameSite: "strict",
-        maxAge: ONE_MONTH_MS,
-        path: "/",
-      });
-
       return res.redirect(
         `${process.env.CLIENT_BASE_URL}/api/auth/callback/vipps`
       );
-
-      return res.status(OK).json({
-        status: OK,
-        success: true,
-        message: "Vipps authentication successful",
-        accessToken,
-        refreshToken,
-        user: user,
-      });
     } else {
       userLogger.warn("Vipps authentication failed", { error: result.message });
       return res.status(UNAUTHORIZED).json({
