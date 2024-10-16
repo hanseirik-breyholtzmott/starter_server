@@ -485,7 +485,9 @@ const vippsCallback = async (req: Request, res: Response) => {
         path: "/",
       });
 
-      return res.redirect(`http://localhost:3000/api/auth/callback/vipps`);
+      return res.redirect(
+        `${process.env.CLIENT_BASE_URL}/api/auth/callback/vipps`
+      );
 
       return res.status(OK).json({
         status: OK,
