@@ -174,11 +174,21 @@ const logout = async (req: Request, res: Response) => {
       : undefined;
 
   console.log("accessToken", accessToken);
-  const { payload } = verifyToken(accessToken || "");
 
-  console.log("logout", payload);
+  if (!accessToken) {
+    userLogger.warn("Logout attempt without access token");
+    return res.status(OK).json({
+      status: OK,
+      success: true,
+      message: "No active session to logout",
+    });
+  }
 
   try {
+    const { payload } = verifyToken(accessToken);
+
+    console.log("logout", payload);
+
     if (payload && payload.sessionId) {
       // Delete the session from database
       await sessionService.deleteSessionById(payload.sessionId as string);
@@ -186,26 +196,24 @@ const logout = async (req: Request, res: Response) => {
       userLogger.info("User logged out successfully", {
         userId: payload.userId,
       });
-
-      return res.status(OK).json({
-        status: OK,
-        success: true,
-        message: "Logout successful",
-      });
     } else {
       userLogger.warn("Logout attempt with invalid token", { accessToken });
-      return res.status(UNAUTHORIZED).json({
-        status: UNAUTHORIZED,
-        success: false,
-        message: "Invalid token",
-      });
     }
+
+    return res.status(OK).json({
+      status: OK,
+      success: true,
+      message: "Logout successful",
+    });
   } catch (error) {
-    userLogger.error("Error during logout", { error: error.message, payload });
-    return res.status(INTERNAL_SERVER_ERROR).json({
-      status: INTERNAL_SERVER_ERROR,
-      success: false,
-      message: "An error occurred during logout",
+    userLogger.error("Error during logout", {
+      error: error.message,
+      accessToken,
+    });
+    return res.status(OK).json({
+      status: OK,
+      success: true,
+      message: "Logout successful",
     });
   }
 };
@@ -395,25 +403,6 @@ const vippsCallback = async (req: Request, res: Response) => {
 
       console.log("userInfo", userInfo);
 
-      /*
-       {
-        address: {
-          address_type: 'home',
-          country: 'NO',
-          formatted: 'VARDESVINGEN 76 B\n5141\nFYLLINGSDALEN\nNO',
-          postal_code: '5141',
-          region: 'FYLLINGSDALEN',
-          street_address: 'VARDESVINGEN 76 B'
-        },
-        email: 'hbreyholtz@gmail.com',
-        email_verified: true,
-        other_addresses: [],
-        phone_number: '4740223394',
-        sid: '7ca810476d2cc3e8',
-        sub: '453f354a-beca-4286-87d9-b09fc7623180'
-        }
-       */
-
       let user = await userService.getUserByEmail(userInfo.email);
 
       if (!user) {
@@ -478,7 +467,7 @@ const vippsCallback = async (req: Request, res: Response) => {
       });
 
       return res.redirect(
-        `${process.env.CLIENT_BASE_URL}/api/auth/callback/vipps`
+        `${process.env.CLIENT_BASE_URL}/api/auth/callback/vipps?accessToken=${accessToken}&refreshToken=${refreshToken}`
       );
     } else {
       userLogger.warn("Vipps authentication failed", { error: result.message });

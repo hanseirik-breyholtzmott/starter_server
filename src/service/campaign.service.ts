@@ -31,7 +31,71 @@ const getCampaign = async (campaignId: string): Promise<ICampaignModel> => {
   }
 };
 
+const countInvested = async (campaignId: string): Promise<number> => {
+  try {
+    const campaign = await CampaignModel.findById(campaignId);
+
+    if (!campaign) {
+      throw new Error("Campaign not found");
+    }
+
+    const startDate = campaign.investmentDetails.startDate;
+    const closingDate = campaign.investmentDetails.closingDate;
+    const pricePerShare = campaign.investmentDetails.sharePrice;
+
+    const result = await ShareModel.aggregate([
+      {
+        $match: {
+          companyId: campaign.companyId,
+          shareClassId: campaign.investmentDetails.shareClassId,
+          purchaseDate: { $gte: startDate, $lte: closingDate },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalShares: { $sum: "$initialShares" },
+        },
+      },
+    ]);
+
+    const totalShares = result.length > 0 ? result[0].totalShares : 0;
+    const totalInvested = totalShares * pricePerShare;
+
+    return totalInvested;
+  } catch (error) {
+    console.error("Error counting invested shares:", error);
+    throw new Error("Failed to count invested shares");
+  }
+};
+
+const countInvestments = async (campaignId: string): Promise<number> => {
+  try {
+    const campaign = await CampaignModel.findById(campaignId);
+
+    if (!campaign) {
+      throw new Error("Campaign not found");
+    }
+
+    const startDate = campaign.investmentDetails.startDate;
+    const closingDate = campaign.investmentDetails.closingDate;
+
+    const investments = await ShareModel.countDocuments({
+      companyId: campaign.companyId,
+      shareClassId: campaign.investmentDetails.shareClassId,
+      purchaseDate: { $gte: startDate, $lte: closingDate },
+    });
+
+    return investments;
+  } catch (error) {
+    console.error("Error counting investments:", error);
+    throw new Error("Failed to count investments");
+  }
+};
+
 export default {
   createCampaign,
   getCampaign,
+  countInvestments,
+  countInvested,
 };

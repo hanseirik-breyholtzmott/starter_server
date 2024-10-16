@@ -30,16 +30,28 @@ const getCampaign = async (req: Request, res: Response) => {
 
   console.log("companyId: ", campaign.companyId.toString());
 
+  const totalInvestments = await campaignService.countInvestments(campaignId);
+
+  const totalInvested = await campaignService.countInvested(campaignId);
+
   //get captable
   const capTable = await shareService.getCapTable(
     campaign.companyId.toString()
   );
 
+  campaign.investmentDetails.startAmount =
+    campaign.investmentDetails.startAmount + totalInvested;
+  campaign.investmentDetails.targetAmount = totalInvestments;
+  campaign.investmentDetails.maximumInvestment =
+    campaign.investmentDetails.startAmount / 8000000;
+
   return res.status(200).json({
     campaign: campaign,
     caplist: {
       investors: capTable,
-      totalShares: 0,
+      //totalInvestments: totalInvestments,
+      /*totalInvested:
+        campaign.investmentDetails.startAmount + totalInvestments * 8,*/
     },
   });
 };
