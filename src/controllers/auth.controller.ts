@@ -354,7 +354,7 @@ const vippsLogin = async (req: Request, res: Response) => {
 
     const redirectUrl = await authService.generateVippsLoginUrl(config);
 
-    userLogger.info("Vipps login URL generated successfully");
+    userLogger.info("Vipps login URL generated successfully: ", redirectUrl);
 
     return res.status(OK).json({
       status: OK,
