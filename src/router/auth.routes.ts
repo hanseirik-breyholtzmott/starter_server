@@ -20,7 +20,7 @@ router.post(
 
 router.post("/login", authValidation.login, authController.login);
 
-router.get("/refresh", authController.refreshToken);
+router.post("/refresh", authController.refreshToken);
 
 router.get("/logout", authController.logout);
 
