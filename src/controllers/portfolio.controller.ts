@@ -47,15 +47,13 @@ const getPortfolio = async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.params.userId;
     console.log("This is the userId", userId);
 
-    const user = await userService.getUserById("66e16c3ad36c9a8fea8c4717");
+    const user = await userService.getUserById(userId);
 
     const companyId = "670e22a15e46088b38c9fc75";
 
     const company = await companyService.getCompanyById(companyId);
 
-    const portfolio = await portfolioService.getUserPortfolio(
-      "66e16c3ad36c9a8fea8c4717"
-    );
+    const portfolio = await portfolioService.getUserPortfolio(userId);
 
     const processedData = DataProcess.processUserPortfolio(portfolio);
 
