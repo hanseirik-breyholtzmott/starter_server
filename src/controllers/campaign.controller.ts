@@ -13,7 +13,7 @@ import shareTransactionService from "../service/shareTransaction.service";
 //Models
 import TransactionModel, { ITransaction } from "../models/transaction.model";
 import SharesModel, { IShare, IShareModel } from "../models/share.model";
-import { ICampaign } from "../models/campaign.model";
+import CampaignModel, { ICampaign } from "../models/campaign.model";
 import ShareTransactionModel, {
   IShareTransaction,
 } from "../models/shareTransaction.model";
@@ -25,12 +25,14 @@ import { campaignLogger } from "../logger";
 const getCampaign = async (req: Request, res: Response) => {
   const campaignId = req.params.campaignId;
 
+  console.log("campaignId: ", campaignId);
+
   //get campaign
   const campaign = await campaignService.getCampaign(campaignId);
 
-  console.log("companyId: ", campaign.companyId.toString());
-
   const totalInvestments = await campaignService.countInvestments(campaignId);
+
+  console.log("totalInvestments: ", totalInvestments);
 
   const totalInvested = await campaignService.countInvested(campaignId);
 
@@ -43,7 +45,8 @@ const getCampaign = async (req: Request, res: Response) => {
     campaign.investmentDetails.startAmount + totalInvested;
   campaign.investmentDetails.targetAmount = totalInvestments;
   campaign.investmentDetails.maximumInvestment =
-    campaign.investmentDetails.startAmount / 8000000;
+    campaign.investmentDetails.startAmount /
+    campaign.investmentDetails.targetAmount;
 
   return res.status(200).json({
     campaign: campaign,
@@ -77,7 +80,7 @@ const getCampaignInvestmentDetails = async (req: Request, res: Response) => {
         description:
           "Når du blir kunde får du 1000kr for kundefoldet, vi oppforder aller invester til å bli kunde hos oss.",
       },
-      {
+      /*{
         title: "6 800 kr",
         value: 850,
         description:
@@ -88,18 +91,18 @@ const getCampaignInvestmentDetails = async (req: Request, res: Response) => {
         value: 1250,
         description:
           "Investerer du 10 000kr eller mer i Folkekraft får du vår strøm til 0kr månedsbeløp og 0kr i påslag.",
-      },
+      },*/
     ],
     terms: [
       {
         id: 1,
-        text: "I understand that I can cancel my investment up until 10/30/24 (48 hours prior to the deal deadline)",
+        text: "Investering i unoterte aksjer innebærer høy risiko. Det er viktig at jeg som investor leser investeringstilbudet nøye og gjør meg egen formening om hvilken risiko den eventuelle investeringen innebærer for meg.",
         link: null,
         url: null,
       },
       {
         id: 2,
-        text: "I understand that Republic will receive a cash and securities commission as further detailed in the offering documents",
+        text: "Jeg gir med dette min fullmakt til styreleder i utsteder til å tegne aksjer på mine vegne under fremsatte vilkår i forbindelse med vedtak om kapitalutvidelse i selskapets generalforsamling.",
         link: "receive a cash",
         url: null,
       },
@@ -123,9 +126,14 @@ const purchaseShares = async (req: Request, res: Response) => {
   const campaignId = req.params.campaignId;
   const { userId, shareNumber, ssn } = req.body;
 
+  console.log("userId: ", userId);
+  console.log("shareNumber: ", shareNumber);
+  console.log("ssn: ", ssn);
+
   const user = await userService.getUserById(userId);
 
   if (!user) {
+    console.log("User not found");
     return res.status(404).json({
       success: false,
       message: "User not found",
@@ -135,6 +143,7 @@ const purchaseShares = async (req: Request, res: Response) => {
   const campaign = await campaignService.getCampaign(campaignId);
 
   if (!campaign) {
+    console.log("Campaign not found");
     return res.status(404).json({
       success: false,
       message: "Campaign not found",

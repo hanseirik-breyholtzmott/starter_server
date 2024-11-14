@@ -3,7 +3,6 @@ import { Types } from "mongoose";
 //Models
 import CompanyModel, { ICompanyModel, ICompany } from "../models/company.model";
 import { IUserModel } from "../models/users.model";
-import ShareModel, { IShareModel } from "../models/share.model";
 
 //Services
 

@@ -1,9 +1,4 @@
 import { Request, Response } from "express";
-import jwt from "jsonwebtoken";
-import bcrypt from "bcrypt";
-import fs from "fs";
-import path from "path";
-import axios from "axios";
 
 //Services
 import userService from "../service/user.service";

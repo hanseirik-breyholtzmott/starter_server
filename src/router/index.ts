@@ -71,6 +71,11 @@ export default (): express.Router => {
     console.log("healthcheck");
     return res.send("you are healthy");
   });
+
+  router.get("/update", async (req, res) => {
+    console.log("healthcheck");
+    return res.send("you are healthy");
+  });
   /*
   router.get("/createCompany", updateController.createCompany); //Works
   router.get("/createCampaign", updateController.createCampaign); //Works

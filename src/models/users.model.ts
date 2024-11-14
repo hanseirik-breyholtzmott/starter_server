@@ -1,5 +1,5 @@
 import mongoose, { Document, Schema } from "mongoose";
-import { v4 as uuidv4 } from "uuid"; // Assuming you're using UUIDs for unique IDs
+import { v4 as uuidv4 } from "uuid";
 
 //Define the IAddress interface
 export interface IAddress {
@@ -89,6 +89,7 @@ export interface IUser {
   recommendedShares?: number;
   purchaseRight?: number;
   lastSignInAt?: Date;
+  holdingCompanies?: mongoose.Types.ObjectId[];
 }
 
 // Define the IUserModel interface, extending IUser and Document
@@ -226,6 +227,12 @@ const UsersSchema = new Schema(
     lastSignInAt: { type: Schema.Types.Date, default: Date.now },
     recommendedShares: { type: Number, default: 0 },
     purchaseRight: { type: Number, default: 0 },
+    holdingCompanies: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "HoldingCompany",
+      },
+    ],
   },
   { timestamps: true }
 );

@@ -2,6 +2,12 @@ import mongoose, { Schema, Document } from "mongoose";
 
 //Models
 
+interface ICompanyRole {
+  userId: mongoose.Types.ObjectId;
+  role: "admin" | "editor" | "viewer";
+  assignedAt: Date;
+}
+
 interface IAddress {
   street: string | null;
   city: string | null;
@@ -55,6 +61,7 @@ export interface ICompany {
   shareClasses?: IShareClass[];
   valuations?: IValuation[];
   documents?: IDocument[];
+  accessControl: ICompanyRole[];
 }
 
 export interface ICompanyModel extends Omit<ICompany, "_id">, Document {}
@@ -100,6 +107,23 @@ const DocumentSchema = new Schema<IDocument>({
   uploadedAt: { type: Schema.Types.Date, default: Date.now },
 });
 
+const CompanyRoleSchema = new Schema<ICompanyRole>({
+  userId: {
+    type: Schema.Types.ObjectId,
+    ref: "Users",
+    required: true,
+  },
+  role: {
+    type: String,
+    enum: ["admin", "editor", "viewer"],
+    required: true,
+  },
+  assignedAt: {
+    type: Date,
+    default: Date.now,
+  },
+});
+
 const CompanySchema: Schema<ICompanyModel> = new Schema({
   name: {
     type: String,
@@ -120,6 +144,9 @@ const CompanySchema: Schema<ICompanyModel> = new Schema({
   shareClasses: [ShareClassSchema],
   valuations: [ValuationSchema],
   documents: [DocumentSchema],
+  accessControl: [CompanyRoleSchema],
 });
+
+CompanySchema.index({ "accessControl.userId": 1 });
 
 export default mongoose.model<ICompanyModel>("Company", CompanySchema);

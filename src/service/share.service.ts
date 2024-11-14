@@ -1,10 +1,21 @@
 //Models
 import sharesModel, { IShare, IShareModel } from "../models/share.model";
+import TransactionModel, {
+  ITransaction,
+  ITransactionModel,
+} from "../models/transaction.model";
+import ShareTransactionModel, {
+  IShareTransaction,
+  IShareTransactionModel,
+} from "../models/shareTransaction.model";
 import { Types } from "mongoose";
 import { PipelineStage } from "mongoose";
 
 //Services
+import userService from "./user.service";
 import companyService from "./company.service";
+import transactionService from "./transaction.service";
+import shareTransactionService from "./shareTransaction.service";
 
 const createShare = async (shareData: IShare): Promise<IShareModel> => {
   try {
@@ -225,6 +236,129 @@ const getTotalPurchasedShares = async (
     (total, share) => total + (share.remainingShares || 0),
     0
   );
+};
+
+const getUserSharesByCompanyId = async (
+  userId: string,
+  companyId: string
+): Promise<IShareModel[]> => {
+  const shares = await sharesModel.find({
+    userId,
+    companyId,
+    shareStatus: { $in: ["active", "locked", "partially_sold"] },
+  });
+  return shares;
+};
+
+const addUserWithShares = async ({
+  userId,
+  companyId,
+  shareClassId,
+  numberOfShares,
+  pricePerShare,
+  identifier,
+  holdingCompanyId,
+}: {
+  userId: string;
+  companyId: string;
+  shareClassId: string;
+  numberOfShares: number;
+  pricePerShare: number;
+  identifier: { type: "ssn" | "registrationNumber"; value: string };
+  holdingCompanyId?: string;
+}): Promise<{
+  share: IShareModel;
+  transaction: ITransactionModel;
+  shareTransaction: IShareTransactionModel;
+} | null> => {
+  try {
+    // 1. Validate user exists
+    const user = await userService.getUserByUserId(userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // 2. Validate share purchase
+    const isValid = await validateSharePurchase(
+      companyId,
+      shareClassId,
+      numberOfShares
+    );
+    if (!isValid) {
+      throw new Error("Invalid share purchase - insufficient available shares");
+    }
+
+    // 3. Create share record
+    const shareData: IShare = {
+      userId,
+      companyId,
+      shareClassId,
+      initialShares: numberOfShares,
+      remainingShares: numberOfShares,
+      purchaseDate: new Date(),
+      purchasePrice: pricePerShare,
+      shareStatus: "active",
+      isLocked: false,
+      transactions: [],
+      identifier,
+      holdingCompanyId,
+    };
+
+    const share = await createShare(shareData);
+
+    // 4. Create transaction record
+    const totalAmount = numberOfShares * pricePerShare;
+    const transactionData: ITransaction = {
+      userId: new Types.ObjectId(userId),
+      transactionType: "shares_purchase",
+      paymentMethod: "bank_transfer", // or other payment method as needed
+      amount: totalAmount,
+      currency: "NOK", // or other currency as needed
+      status: "paid",
+      taxAmount: 0, // Add tax calculation if needed
+      taxRate: 0, // Add tax rate if needed
+      transactionDate: new Date(),
+    };
+
+    const transaction = await transactionService.createTransaction(
+      transactionData
+    );
+
+    // 5. Create share transaction record
+    const shareTransactionData: IShareTransaction = {
+      shareId: new Types.ObjectId(share._id.toString()),
+      transactionId: new Types.ObjectId(transaction._id.toString()),
+      userId: new Types.ObjectId(userId),
+      companyId: new Types.ObjectId(companyId),
+      shareClassId: new Types.ObjectId(shareClassId),
+      transactionType: "buy",
+      quantity: numberOfShares,
+      pricePerShare: pricePerShare,
+      totalAmount: totalAmount,
+      transactionDate: new Date(),
+      status: "completed",
+    };
+
+    const shareTransaction =
+      await shareTransactionService.createShareTransaction(
+        shareTransactionData
+      );
+
+    // 6. Update share with transaction reference
+    share.transactions.push(
+      new Types.ObjectId(shareTransaction._id.toString())
+    );
+    await share.save();
+
+    return {
+      share,
+      transaction,
+      shareTransaction,
+    };
+  } catch (error) {
+    console.error("Error adding user with shares:", error);
+    throw error;
+  }
 };
 
 export default {

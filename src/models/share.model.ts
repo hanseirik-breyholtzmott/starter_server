@@ -25,6 +25,7 @@ export interface IShare {
     type: "ssn" | "registrationNumber";
     value: string;
   };
+  holdingCompanyId?: mongoose.Types.ObjectId | string;
 }
 
 export interface IShareModel extends IShare, Document {
@@ -128,6 +129,22 @@ const SharesSchema: Schema<IShareModel> = new Schema(
           },
           message: "Invalid identifier value",
         },
+      },
+    },
+    holdingCompanyId: {
+      type: Schema.Types.ObjectId,
+      ref: "HoldingCompany",
+      required: false,
+      validate: {
+        validator: function (v: any) {
+          return (
+            v === undefined ||
+            v === null ||
+            mongoose.Types.ObjectId.isValid(v) ||
+            typeof v === "string"
+          );
+        },
+        message: (props) => `${props.value} is not a valid ObjectId or string!`,
       },
     },
   },
