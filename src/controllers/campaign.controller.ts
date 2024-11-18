@@ -50,18 +50,29 @@ const getCampaign = async (req: Request, res: Response) => {
     campaign.companyId.toString()
   );
 
+  var totalInvestedAmount = totalInvested;
+  var capital = campaign.investmentDetails.startAmount + totalInvestedAmount;
+
+  console.log("totalInvestedAmount: ", totalInvestedAmount);
+  console.log("capital: ", capital);
+
   // Update campaign investment details
   campaign.investmentDetails = {
     ...campaign.investmentDetails,
     startAmount: campaign.investmentDetails.startAmount + totalInvested,
     targetAmount: totalInvestments,
     maximumInvestment:
-      campaign.investmentDetails.startAmount / originalTargetAmount,
+      (campaign.investmentDetails.startAmount + totalInvestedAmount) /
+      originalTargetAmount,
   };
+
+  console.log("campaign.investmentDetails: ", totalInvestedAmount);
 
   //const totalInvestments = await campaignService.countInvestments(campaignId);
 
   console.log("totalInvestments: ", totalInvestments);
+  console.log("totalInvested: ", totalInvested);
+  console.log("sharePrice: ", campaign.investmentDetails.sharePrice);
 
   //const totalInvested = await campaignService.countInvested(campaignId);
 
