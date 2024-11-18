@@ -25,48 +25,59 @@ import { campaignLogger } from "../logger";
 const getCampaign = async (req: Request, res: Response) => {
   const campaignId = req.params.campaignId;
 
-  console.log("campaignId: ", campaignId);
-
-  //get campaign
+  // Get campaign and verify it exists
   const campaign = await campaignService.getCampaign(campaignId);
+  if (!campaign) {
+    return res.status(404).json({
+      success: false,
+      message: "Campaign not found",
+    });
+  }
 
-  console.log(campaign);
-
-  var targetAmount = campaign.investmentDetails.targetAmount;
-
-  console.log("targetAmount: ", targetAmount);
-
+  // Get investment statistics
+  const originalTargetAmount = campaign.investmentDetails.targetAmount;
   const totalInvestments = await campaignService.countInvestments(campaignId);
-
-  console.log("totalInvestments: ", totalInvestments);
-
   const totalInvested = await campaignService.countInvested(campaignId);
-
-  // Calculate percentage of investment progress
   const percentageInvested = (totalInvested / totalInvestments) * 100;
 
-  //get captable
+  console.log("originalTargetAmount: ", originalTargetAmount);
+  console.log("totalInvestments: ", totalInvestments); //wrong
+  console.log("totalInvested: ", totalInvested); //wrong
+  console.log("percentageInvested: ", percentageInvested); //wrong
+
+  // Get company cap table
   const capTable = await shareService.getCapTable(
     campaign.companyId.toString()
   );
 
-  campaign.investmentDetails.startAmount =
-    campaign.investmentDetails.startAmount + totalInvested;
+  // Update campaign investment details
+  campaign.investmentDetails = {
+    ...campaign.investmentDetails,
+    startAmount: campaign.investmentDetails.startAmount + totalInvested,
+    targetAmount: totalInvestments,
+    maximumInvestment:
+      campaign.investmentDetails.startAmount / originalTargetAmount,
+  };
 
-  campaign.investmentDetails.targetAmount = totalInvestments;
+  //const totalInvestments = await campaignService.countInvestments(campaignId);
 
-  campaign.investmentDetails.maximumInvestment =
-    campaign.investmentDetails.startAmount / targetAmount;
+  console.log("totalInvestments: ", totalInvestments);
 
-  console.log("max investment: ", campaign.investmentDetails.maximumInvestment);
-  console.log("target amount: ", campaign.investmentDetails.targetAmount);
-  console.log("start amount: ", campaign.investmentDetails.startAmount);
+  //const totalInvested = await campaignService.countInvested(campaignId);
+
+  // Calculate percentage of investment progress
+  //const percentageInvested = (totalInvested / totalInvestments) * 100;
+
+  //get captable
+  /*const capTable = await shareService.getCapTable(
+    campaign.companyId.toString()
+  );*/
 
   return res.status(200).json({
-    campaign: campaign,
+    campaign,
     caplist: {
       investors: capTable,
-      totalInvestments: totalInvestments,
+      totalInvestments,
       totalInvested:
         campaign.investmentDetails.startAmount + totalInvestments * 8,
     },
