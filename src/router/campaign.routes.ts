@@ -7,6 +7,8 @@ import campaignController from "../controllers/campaign.controller";
 
 const router = express.Router();
 
+router.get("/all", campaignController.getCampaigns);
+
 router.get("/:campaignId", campaignController.getCampaign);
 
 router.get(

@@ -64,7 +64,7 @@ export default (): express.Router => {
   router.use("/auth", authRoutes);
   router.use("/api/user", portfolioRoutes);
   router.use("/api/user", transactionRoutes);
-  router.use("/api/campaign", authenticate, campaignRoutes);
+  router.use("/api/campaign", campaignRoutes);
 
   //Healthcheck Route
   router.get("/healthcheck", async (req, res) => {

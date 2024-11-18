@@ -30,11 +30,20 @@ const getCampaign = async (req: Request, res: Response) => {
   //get campaign
   const campaign = await campaignService.getCampaign(campaignId);
 
+  console.log(campaign);
+
+  var targetAmount = campaign.investmentDetails.targetAmount;
+
+  console.log("targetAmount: ", targetAmount);
+
   const totalInvestments = await campaignService.countInvestments(campaignId);
 
   console.log("totalInvestments: ", totalInvestments);
 
   const totalInvested = await campaignService.countInvested(campaignId);
+
+  // Calculate percentage of investment progress
+  const percentageInvested = (totalInvested / totalInvestments) * 100;
 
   //get captable
   const capTable = await shareService.getCapTable(
@@ -43,19 +52,25 @@ const getCampaign = async (req: Request, res: Response) => {
 
   campaign.investmentDetails.startAmount =
     campaign.investmentDetails.startAmount + totalInvested;
+
   campaign.investmentDetails.targetAmount = totalInvestments;
+
   campaign.investmentDetails.maximumInvestment =
-    campaign.investmentDetails.startAmount /
-    campaign.investmentDetails.targetAmount;
+    campaign.investmentDetails.startAmount / targetAmount;
+
+  console.log("max investment: ", campaign.investmentDetails.maximumInvestment);
+  console.log("target amount: ", campaign.investmentDetails.targetAmount);
+  console.log("start amount: ", campaign.investmentDetails.startAmount);
 
   return res.status(200).json({
     campaign: campaign,
     caplist: {
       investors: capTable,
-      //totalInvestments: totalInvestments,
-      /*totalInvested:
-        campaign.investmentDetails.startAmount + totalInvestments * 8,*/
+      totalInvestments: totalInvestments,
+      totalInvested:
+        campaign.investmentDetails.startAmount + totalInvestments * 8,
     },
+    percentageInvested: Math.round(percentageInvested * 100) / 100,
   });
 };
 
@@ -255,8 +270,36 @@ const purchaseShares = async (req: Request, res: Response) => {
   });
 };
 
+const getCampaigns = async (req: Request, res: Response) => {
+  console.log("getCampaigns");
+  const campaigns = await campaignService.getAllCampaigns();
+
+  // Transform campaigns into simplified format and sort by closing date
+  const simplifiedCampaigns = campaigns
+    .sort((a, b) => {
+      // Put campaigns without end dates at the end
+      if (!a.investmentDetails?.closingDate) return 1;
+      if (!b.investmentDetails?.closingDate) return -1;
+      return (
+        new Date(a.investmentDetails?.closingDate).getTime() -
+        new Date(b.investmentDetails?.closingDate).getTime()
+      );
+    })
+    .map((campaign) => ({
+      id: campaign._id,
+      title: campaign.campaignInfo?.name || "Unnamed Campaign",
+      description: campaign.campaignInfo?.description || "",
+      displayImage:
+        campaign.displayImages[0] || "https://via.placeholder.com/150",
+      endDate: campaign.investmentDetails?.closingDate || null,
+    }));
+
+  return res.status(200).json(simplifiedCampaigns);
+};
+
 export default {
   getCampaign,
+  getCampaigns,
   getCampaignInvestmentDetails,
   purchaseShares,
 };

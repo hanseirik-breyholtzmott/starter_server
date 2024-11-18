@@ -93,9 +93,22 @@ const countInvestments = async (campaignId: string): Promise<number> => {
   }
 };
 
+const getAllCampaigns = async (): Promise<ICampaignModel[]> => {
+  try {
+    const campaigns = await CampaignModel.find({
+      "investmentDetails.status": "active",
+    });
+    return campaigns;
+  } catch (error) {
+    console.error("Error getting all campaigns:", error);
+    throw new Error("Failed to get all campaigns");
+  }
+};
+
 export default {
   createCampaign,
   getCampaign,
+  getAllCampaigns,
   countInvestments,
   countInvested,
 };
