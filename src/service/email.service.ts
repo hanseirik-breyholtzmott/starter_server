@@ -58,12 +58,13 @@ const sendEmail = async (
     emailLogger.info("Email sent successfully", { to, subject });
     return { success: true, data: data };
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     emailLogger.error("An unexpected error occurred while sending email", {
-      error: (error as Error).message,
+      error: errorMessage,
       to,
       subject,
     });
-    return { success: false, error: (error as Error).message };
+    return { success: false, error: errorMessage };
   }
 };
 

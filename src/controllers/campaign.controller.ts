@@ -35,12 +35,15 @@ const getCampaign = async (req: Request, res: Response) => {
   }
 
   // Get investment statistics
-  const originalTargetAmount = campaign.investmentDetails.targetAmount;
+  const targetAmount = campaign.investmentDetails.targetAmount;
   const totalInvestments = await campaignService.countInvestments(campaignId);
   const totalInvested = await campaignService.countInvested(campaignId);
-  const percentageInvested = (totalInvested / totalInvestments) * 100;
 
-  console.log("originalTargetAmount: ", originalTargetAmount);
+  // Calculate percentage with safety check for division by zero
+  const percentageInvested =
+    targetAmount > 0 ? (totalInvested / targetAmount) * 100 : 0;
+
+  console.log("originalTargetAmount: ", targetAmount);
   console.log("totalInvestments: ", totalInvestments); //wrong
   console.log("totalInvested: ", totalInvested); //wrong
   console.log("percentageInvested: ", percentageInvested); //wrong
@@ -50,23 +53,16 @@ const getCampaign = async (req: Request, res: Response) => {
     campaign.companyId.toString()
   );
 
-  var totalInvestedAmount = totalInvested;
-  var capital = campaign.investmentDetails.startAmount + totalInvestedAmount;
-
-  console.log("totalInvestedAmount: ", totalInvestedAmount);
-  console.log("capital: ", capital);
+  // Calculate new total amount including starting amount
+  const totalAmount = campaign.investmentDetails.startAmount + totalInvested;
 
   // Update campaign investment details
   campaign.investmentDetails = {
     ...campaign.investmentDetails,
-    startAmount: campaign.investmentDetails.startAmount + totalInvested,
-    targetAmount: totalInvestments,
-    maximumInvestment:
-      (campaign.investmentDetails.startAmount + totalInvestedAmount) /
-      originalTargetAmount,
+    startAmount: campaign.investmentDetails.startAmount,
+    targetAmount: targetAmount,
+    maximumInvestment: campaign.investmentDetails.maximumInvestment, // Keeping original maximum investment
   };
-
-  console.log("campaign.investmentDetails: ", totalInvestedAmount);
 
   //const totalInvestments = await campaignService.countInvestments(campaignId);
 
@@ -76,21 +72,14 @@ const getCampaign = async (req: Request, res: Response) => {
 
   //const totalInvested = await campaignService.countInvested(campaignId);
 
-  // Calculate percentage of investment progress
-  //const percentageInvested = (totalInvested / totalInvestments) * 100;
-
-  //get captable
-  /*const capTable = await shareService.getCapTable(
-    campaign.companyId.toString()
-  );*/
+  console.log(campaign.investmentDetails);
 
   return res.status(200).json({
     campaign,
     caplist: {
       investors: capTable,
       totalInvestments,
-      totalInvested:
-        campaign.investmentDetails.startAmount + totalInvestments * 8,
+      totalInvested: totalAmount, // Using actual calculated total instead of hardcoded multiplication
     },
     percentageInvested: Math.round(percentageInvested * 100) / 100,
   });
@@ -106,7 +95,7 @@ const getCampaignInvestmentDetails = async (req: Request, res: Response) => {
       "Invest in Folkekraft to get access to our platform and start investing in the stock market.",
     investmentDetails: {
       investmentMinimum: 300,
-      investmentMaximum: 10000,
+      investmentMaximum: 100000,
       investmentRecommendation: 1000,
       investmentPurchaseRight: 1000,
     },
