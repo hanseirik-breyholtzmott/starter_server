@@ -13,7 +13,10 @@ import shareTransactionService from "../service/shareTransaction.service";
 //Models
 import TransactionModel, { ITransaction } from "../models/transaction.model";
 import SharesModel, { IShare, IShareModel } from "../models/share.model";
-import CampaignModel, { ICampaign } from "../models/campaign.model";
+import CampaignModel, {
+  ICampaignModel,
+  ICampaign,
+} from "../models/campaign.model";
 import ShareTransactionModel, {
   IShareTransaction,
 } from "../models/shareTransaction.model";
@@ -149,136 +152,223 @@ const getCampaignInvestmentDetails = async (req: Request, res: Response) => {
 };
 
 const purchaseShares = async (req: Request, res: Response) => {
-  const campaignId = req.params.campaignId;
-  const { userId, shareNumber, ssn } = req.body;
-
-  console.log("userId: ", userId);
-  console.log("shareNumber: ", shareNumber);
-  console.log("ssn: ", ssn);
-
-  const user = await userService.getUserById(userId);
-
-  if (!user) {
-    console.log("User not found");
-    return res.status(404).json({
-      success: false,
-      message: "User not found",
-    });
-  }
-
-  const campaign = await campaignService.getCampaign(campaignId);
-
-  if (!campaign) {
-    console.log("Campaign not found");
-    return res.status(404).json({
-      success: false,
-      message: "Campaign not found",
-    });
-  }
-
-  const company = await companyService.getCompanyById(
-    campaign.companyId.toString()
-  );
-
-  if (!company) {
-    return res.status(404).json({
-      success: false,
-      message: "Company not found",
-    });
-  }
-
-  //Create a new transaction
-  const newTransaction: ITransaction = {
-    userId: user._id as Types.ObjectId,
-    paymentMethod: "bank_transfer",
-    stripePaymentId: "transaction",
-    transactionType: "shares_purchase",
-    amount: shareNumber * 8,
-    currency: "NOK",
-    status: "pending",
-    taxAmount: 0,
-    taxRate: 0,
-    transactionDate: new Date(),
-  };
-
-  const transaction = await transactionService.createTransaction(
-    newTransaction
-  );
-
-  let identifierType: "ssn" | "registrationNumber" = "ssn";
-  let identifierValue: string = ssn;
-
-  //Ssn
-  if (ssn.length == 11) {
-    identifierType = "ssn";
-    identifierValue = ssn;
-  } else {
-    identifierType = "registrationNumber";
-    identifierValue = ssn;
-  }
-
-  //Create a new shares entry
-  const newShare: IShare = {
-    userId: user._id as Types.ObjectId,
-    companyId: company._id as Types.ObjectId,
-    initialShares: shareNumber,
-    remainingShares: shareNumber,
-    purchaseDate: new Date(),
-    purchasePrice: 8,
-    transactions: [transaction._id as Types.ObjectId],
-    shareClassId: new Types.ObjectId("66fffe0f471d04c7b175965c"),
-    identifier: {
-      type: identifierType,
-      value: identifierValue,
-    },
-    shareStatus: "active",
-    isLocked: false,
-  };
-
-  const share = await shareService.createShare(newShare);
-
-  //Share transaction
-  const newShareTransaction: IShareTransaction = {
-    userId: user._id as Types.ObjectId,
-    companyId: company._id as Types.ObjectId,
-    shareClassId: new Types.ObjectId("66fffe0f471d04c7b175965c"),
-    totalAmount: shareNumber * 8,
-    status: "pending",
-    shareId: share._id as Types.ObjectId,
-    transactionId: transaction._id as Types.ObjectId,
-    transactionType: "buy",
-    quantity: shareNumber,
-    pricePerShare: 8,
-    transactionDate: new Date(),
-  };
-
-  const shareTransaction = await shareTransactionService.createShareTransaction(
-    newShareTransaction
-  );
-
-  //create a notification to user
-  const notification = await notificationService.createNotification(
-    user._id.toString(),
-    "Aksjer kjøpt",
-    "Du har kjøpt " + shareNumber + " aksjer."
-  );
-
-  //Send email to user
-  const emailResult = await emailService.sendEmail(
-    user.primaryEmailAddress,
-    "Bekreftelse på kjøp av aksjer",
-    `You have successfully purchased ${shareNumber} shares.`,
-    `<h1>Share Purchase Confirmation</h1><p>You have successfully purchased ${shareNumber} shares.</p>`
-  );
-
-  if (!emailResult.success) {
-    console.error("Failed to send confirmation email:", emailResult.error);
-  }
-
-  return res.status(200).json({
-    success: true,
-    message: `Du har tegnet deg ${shareNumber} aksjer i Folkekraft AS.`,
+  campaignLogger.info("Starting purchase shares process", {
+    action: "purchaseShares",
+    status: "started",
   });
+
+  try {
+    const campaignId = req.params.campaignId;
+    const { userId, shareNumber, ssn } = req.body;
+
+    campaignLogger.info("Purchase shares request received", {
+      campaignId,
+      userId,
+      shareNumber,
+      action: "purchaseShares",
+    });
+
+    const user = await userService.getUserById(userId);
+
+    if (!user) {
+      campaignLogger.error("User not found", {
+        userId,
+        action: "purchaseShares",
+      });
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+    campaignLogger.info("User found", {
+      userId,
+      email: user.primaryEmailAddress,
+      action: "purchaseShares",
+    });
+
+    const campaign = await campaignService.getCampaign(campaignId);
+
+    if (!campaign) {
+      campaignLogger.error("Campaign not found", {
+        campaignId,
+        action: "purchaseShares",
+      });
+      return res.status(404).json({
+        success: false,
+        message: "Campaign not found",
+      });
+    }
+    campaignLogger.info("Campaign found", {
+      campaignId,
+      campaignName: campaign.campaignInfo.name,
+      action: "purchaseShares",
+    });
+
+    const company = await companyService.getCompanyById(
+      campaign.companyId.toString()
+    );
+    if (!company) {
+      campaignLogger.error("Company not found", {
+        companyId: campaign.companyId,
+        action: "purchaseShares",
+      });
+      return res.status(404).json({
+        success: false,
+        message: "Company not found",
+      });
+    }
+    campaignLogger.info("Company found", {
+      companyId: company._id,
+      companyName: company.name,
+      action: "purchaseShares",
+    });
+
+    // Create transaction
+    campaignLogger.info("Creating transaction", {
+      userId,
+      amount: shareNumber * campaign.investmentDetails.sharePrice,
+      action: "purchaseShares",
+    });
+
+    const newTransaction: ITransaction = {
+      userId: user._id as Types.ObjectId,
+      paymentMethod: "bank_transfer",
+      stripePaymentId: "transaction",
+      transactionType: "shares_purchase",
+      amount: shareNumber * campaign.investmentDetails.sharePrice,
+      currency: "NOK",
+      status: "pending",
+      taxAmount: 0,
+      taxRate: 0,
+      transactionDate: new Date(),
+    };
+
+    const transaction = await transactionService.createTransaction(
+      newTransaction
+    );
+    campaignLogger.info("Transaction created", {
+      transactionId: transaction._id,
+      action: "purchaseShares",
+    });
+
+    // Create share
+    let identifierType: "ssn" | "registrationNumber" =
+      ssn.length === 11 ? "ssn" : "registrationNumber";
+    const newShare: IShare = {
+      userId: user._id as Types.ObjectId,
+      companyId: company._id as Types.ObjectId,
+      initialShares: shareNumber,
+      remainingShares: shareNumber,
+      purchaseDate: new Date(),
+      purchasePrice: campaign.investmentDetails.sharePrice,
+      transactions: [transaction._id as Types.ObjectId],
+      shareClassId: campaign.investmentDetails.shareClassId,
+      identifier: {
+        type: identifierType,
+        value: ssn,
+      },
+      shareStatus: "active",
+      isLocked: false,
+    };
+
+    const share = await shareService.createShare(newShare);
+    campaignLogger.info("Share created", {
+      shareId: share._id,
+      action: "purchaseShares",
+    });
+
+    // Create share transaction
+    const newShareTransaction: IShareTransaction = {
+      userId: user._id as Types.ObjectId,
+      companyId: company._id as Types.ObjectId,
+      shareClassId: campaign.investmentDetails.shareClassId,
+      totalAmount: shareNumber * campaign.investmentDetails.sharePrice,
+      status: "pending",
+      shareId: share._id as Types.ObjectId,
+      transactionId: transaction._id as Types.ObjectId,
+      transactionType: "buy",
+      quantity: shareNumber,
+      pricePerShare: campaign.investmentDetails.sharePrice,
+      transactionDate: new Date(),
+    };
+
+    const shareTransaction =
+      await shareTransactionService.createShareTransaction(newShareTransaction);
+    campaignLogger.info("Share transaction created", {
+      shareTransactionId: shareTransaction._id,
+      action: "purchaseShares",
+    });
+
+    // Create notification
+    const notification = await notificationService.createNotification(
+      user._id.toString(),
+      "Aksjer kjøpt",
+      `Du har kjøpt ${shareNumber} aksjer.`
+    );
+    campaignLogger.info("Notification created", {
+      notificationId: notification._id,
+      action: "purchaseShares",
+    });
+
+    // Send email
+    try {
+      campaignLogger.info("Attempting to send email", {
+        recipient: user.primaryEmailAddress,
+        action: "purchaseShares",
+      });
+
+      const emailResult = await emailService.sendEmail(
+        user.primaryEmailAddress,
+        "Bekreftelse på kjøp av aksjer",
+        `Du har kjøpt ${shareNumber} aksjer i ${company.name}.`,
+        `
+          <h1>Kjøpsbekreftelse</h1>
+          <p>Hei ${user.firstName},</p>
+          <p>Du har kjøpt ${shareNumber} aksjer i ${company.name}.</p>
+          <p>Kjøpssum: NOK ${
+            shareNumber * campaign.investmentDetails.sharePrice
+          }</p>
+          <p>Dato: ${new Date().toLocaleDateString("no-NO")}</p>
+          <br>
+          <p>Med vennlig hilsen<br>Folkekraft AS</p>
+        `
+      );
+
+      campaignLogger.info("Email sent successfully", {
+        emailResult,
+        action: "purchaseShares",
+      });
+    } catch (error) {
+      campaignLogger.error("Failed to send email", {
+        error: error instanceof Error ? error.message : String(error),
+        action: "purchaseShares",
+      });
+    }
+
+    campaignLogger.info("Purchase shares process completed successfully", {
+      userId,
+      campaignId,
+      shareNumber,
+      action: "purchaseShares",
+      status: "completed",
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: `Du har tegnet deg ${shareNumber} aksjer i ${company.name}.`,
+    });
+  } catch (error) {
+    campaignLogger.error("Purchase shares process failed", {
+      error: error instanceof Error ? error.message : String(error),
+      action: "purchaseShares",
+      status: "failed",
+    });
+
+    return res.status(500).json({
+      success: false,
+      message: "An error occurred while processing your purchase",
+    });
+  }
 };
 
 const getCampaigns = async (req: Request, res: Response) => {
