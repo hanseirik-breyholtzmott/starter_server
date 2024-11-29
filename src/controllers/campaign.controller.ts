@@ -89,66 +89,61 @@ const getCampaign = async (req: Request, res: Response) => {
 };
 
 const getCampaignInvestmentDetails = async (req: Request, res: Response) => {
-  const campaignId = req.params.campaignId;
+  try {
+    const campaignId = req.params.campaignId;
 
-  return res.status(200).json({
-    title: "Investering i Folkekraft AS",
-    icon: "https://via.placeholder.com/150",
-    description:
-      "Invest in Folkekraft to get access to our platform and start investing in the stock market.",
-    investmentDetails: {
-      investmentMinimum: 300,
-      investmentMaximum: 100000,
-      investmentRecommendation: 1000,
-      investmentPurchaseRight: 1000,
-    },
-    perks: [
-      {
-        title: "Få 1 000kr",
-        value: 0,
-        description:
-          "Når du blir kunde får du 1000kr for kundefoldet, vi oppforder aller invester til å bli kunde hos oss.",
+    // Get campaign and verify it exists
+    const campaign = await campaignService.getCampaign(campaignId);
+    if (!campaign) {
+      return res.status(404).json({
+        success: false,
+        message: "Campaign not found",
+      });
+    }
+
+    // Get company details
+    const company = await companyService.getCompanyById(
+      campaign.companyId.toString()
+    );
+    if (!company) {
+      return res.status(404).json({
+        success: false,
+        message: "Company not found",
+      });
+    }
+
+    // Calculate available shares
+    const totalInvested = await campaignService.countInvested(campaignId);
+    const availableShares = Math.floor(
+      (campaign.investmentDetails.targetAmount - totalInvested) /
+        campaign.investmentDetails.sharePrice
+    );
+
+    return res.status(200).json({
+      companyName: campaign.campaignInfo.name,
+      description: campaign.campaignInfo.description,
+      ceo: company.ceo,
+      investmentDetails: {
+        sharePrice: campaign.investmentDetails.sharePrice,
+        shareClassId: campaign.investmentDetails.shareClassId,
+        availableShares: availableShares,
+        minSharePurchase: campaign.investmentDetails.minimumInvestment,
+        maxSharePurchase: campaign.investmentDetails.maximumInvestment || null,
       },
-      /*{
-        title: "6 800 kr",
-        value: 850,
-        description:
-          "Dette er det vi ønsker alle våre invester kommer inn med i Folkekraft.",
+      bankAccount: {
+        accountNumber: campaign.bankAccount.accountNumber,
+        bankName: campaign.bankAccount.bankName,
+        accountHolderName: campaign.bankAccount.accountHolderName,
       },
-      {
-        title: "10 000 kr",
-        value: 1250,
-        description:
-          "Investerer du 10 000kr eller mer i Folkekraft får du vår strøm til 0kr månedsbeløp og 0kr i påslag.",
-      },*/
-    ],
-    terms: [
-      {
-        id: 1,
-        text: "Investering i unoterte aksjer innebærer høy risiko. Det er viktig at jeg som investor leser investeringstilbudet nøye og gjør meg egen formening om hvilken risiko den eventuelle investeringen innebærer for meg.",
-        link: null,
-        url: null,
-      },
-      {
-        id: 2,
-        text: "Jeg gir med dette min fullmakt til styreleder i utsteder til å tegne aksjer på mine vegne under fremsatte vilkår i forbindelse med vedtak om kapitalutvidelse i selskapets generalforsamling.",
-        link: "receive a cash",
-        url: null,
-      },
-      {
-        id: 3,
-        text: "I understand that investing this amount into several deals would better diversify my risk",
-        link: null,
-        url: null,
-      },
-      {
-        id: 4,
-        text: "I understand that there is no guarantee of a relationship between Republic and Groundfloor post-offering",
-        link: null,
-        url: null,
-      },
-    ],
-  });
+      perks: campaign.perks || [],
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "An error occurred while fetching campaign investment details",
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
 };
 
 const purchaseShares = async (req: Request, res: Response) => {

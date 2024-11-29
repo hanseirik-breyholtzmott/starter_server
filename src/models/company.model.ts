@@ -48,6 +48,7 @@ interface IDocument {
 export interface ICompany {
   _id: mongoose.Types.ObjectId;
   name: string;
+  ceo: string;
   address?: IAddress;
   industryTags?: string[];
   email?: string | null;
@@ -131,6 +132,7 @@ const CompanySchema: Schema<ICompanyModel> = new Schema({
     trim: true,
     unique: true,
   },
+  ceo: { type: Schema.Types.String, required: true },
   establishedDate: { type: Schema.Types.Date, required: true },
   registrationNumber: { type: Schema.Types.String, required: true },
   employees: { type: Schema.Types.Number, default: 0 },

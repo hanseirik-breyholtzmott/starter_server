@@ -10,6 +10,7 @@ import authRoutes from "./auth.routes";
 import portfolioRoutes from "./portfolio.routes";
 import transactionRoutes from "./transaction.routes";
 import campaignRoutes from "./campaign.routes";
+import pdfRoutes from "./pdf.routes";
 
 //Controllers
 import updateController from "../controllers/update.controller";
@@ -20,8 +21,8 @@ import authenticate from "../middleware/authenticate";
 const router = express.Router();
 
 const allowedOrigins = [
-  "http://localhost:3000", // Development
-  "https://invest.folkekraft.no", // Production
+  "http://localhost:3000",
+  "https://invest.folkekraft.no",
 ];
 
 export default (): express.Router => {
@@ -33,19 +34,16 @@ export default (): express.Router => {
   router.use(
     cors({
       origin: function (origin, callback) {
-        // Allow requests with no origin (like mobile apps or curl requests)
-        if (!origin) return callback(null, true);
-        if (allowedOrigins.indexOf(origin) === -1) {
-          var msg =
-            "The CORS policy for this site does not allow access from the specified Origin.";
-          return callback(new Error(msg), false);
+        if (!origin || allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error("Not allowed by CORS"));
         }
-        return callback(null, true);
       },
-      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // Allowed HTTP methods
-      allowedHeaders: ["Content-Type", "Authorization"], // Allowed headers
-      credentials: true, // Allow cookies or authentication headers
-      exposedHeaders: ["Access-Control-Allow-Origin"], // Expose the CORS header
+      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+      allowedHeaders: ["Content-Type", "Authorization", "Content-Disposition"],
+      credentials: true,
+      exposedHeaders: ["Content-Disposition", "Content-Type"],
     })
   );
   router.use(
@@ -65,6 +63,7 @@ export default (): express.Router => {
   router.use("/api/user", portfolioRoutes);
   router.use("/api/user", transactionRoutes);
   router.use("/api/campaign", campaignRoutes);
+  router.use("/api/pdf", pdfRoutes);
 
   //Healthcheck Route
   router.get("/healthcheck", async (req, res) => {
