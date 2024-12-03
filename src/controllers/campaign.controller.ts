@@ -367,30 +367,56 @@ const purchaseShares = async (req: Request, res: Response) => {
 };
 
 const getCampaigns = async (req: Request, res: Response) => {
-  console.log("getCampaigns");
-  const campaigns = await campaignService.getAllCampaigns();
+  try {
+    const campaigns = await campaignService.getAllCampaigns();
 
-  // Transform campaigns into simplified format and sort by closing date
-  const simplifiedCampaigns = campaigns
-    .sort((a, b) => {
-      // Put campaigns without end dates at the end
-      if (!a.investmentDetails?.closingDate) return 1;
-      if (!b.investmentDetails?.closingDate) return -1;
-      return (
-        new Date(a.investmentDetails?.closingDate).getTime() -
-        new Date(b.investmentDetails?.closingDate).getTime()
-      );
-    })
-    .map((campaign) => ({
-      id: campaign._id,
-      title: campaign.campaignInfo?.name || "Unnamed Campaign",
-      description: campaign.campaignInfo?.description || "",
-      displayImage:
-        campaign.displayImages[0] || "https://via.placeholder.com/150",
-      endDate: campaign.investmentDetails?.closingDate || null,
-    }));
+    // Transform campaigns into enhanced format and sort by closing date
+    const enhancedCampaigns = campaigns
+      .sort((a, b) => {
+        // Put campaigns without end dates at the end
+        if (!a.investmentDetails?.closingDate) return 1;
+        if (!b.investmentDetails?.closingDate) return -1;
+        return (
+          new Date(a.investmentDetails.closingDate).getTime() -
+          new Date(b.investmentDetails.closingDate).getTime()
+        );
+      })
+      .map((campaign) => {
+        // Calculate remaining days if end date exists
+        let daysRemaining = null;
+        const now = new Date();
+        if (campaign.investmentDetails?.closingDate) {
+          const endDate = new Date(campaign.investmentDetails.closingDate);
+          const diffTime = endDate.getTime() - now.getTime();
+          daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        }
 
-  return res.status(200).json(simplifiedCampaigns);
+        return {
+          id: campaign._id,
+          title: campaign.campaignInfo?.name || "Unnamed Campaign",
+          description: campaign.campaignInfo?.description || "",
+          companyName: campaign.campaignInfo?.name || "",
+          tags: campaign.campaignInfo?.tags || [],
+          displayImage:
+            campaign.displayImages?.[0]?.image ||
+            "https://via.placeholder.com/150",
+          iconImage:
+            campaign.campaignInfo?.iconImage ||
+            "https://via.placeholder.com/32",
+          startDate: campaign.investmentDetails?.startDate || null,
+          endDate: campaign.investmentDetails?.closingDate || null,
+          daysRemaining: daysRemaining > 0 ? daysRemaining : 0,
+        };
+      });
+
+    return res.status(200).json(enhancedCampaigns);
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch campaigns",
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
 };
 
 export default {

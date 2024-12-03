@@ -55,6 +55,7 @@ export interface ICampaign {
     name: string;
     description: string;
     tags: string[];
+    iconImage?: string;
   };
   investmentDetails: IInvestmentDetails;
   perks?: IPerk[];
@@ -137,6 +138,7 @@ const CampaignSchema: Schema = new Schema(
       name: { type: String, required: true },
       description: { type: String, required: true },
       tags: [{ type: String }],
+      iconImage: { type: String },
     },
     investmentDetails: { type: InvestmentDetailsSchema, required: true },
     perks: [PerkSchema],

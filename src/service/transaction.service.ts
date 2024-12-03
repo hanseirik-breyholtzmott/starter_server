@@ -28,24 +28,75 @@ interface CombinedTransaction {
   currency: string;
   status: string;
   transactionDate: Date;
+  paymentMethod: string;
+  taxAmount: number;
+  taxRate: number;
+  discount?: number;
   shareTransaction?: {
     companyName: string;
     shareClassName: string;
     quantity: number;
     pricePerShare: number;
+    totalShares: number;
   };
 }
 
+interface TransactionFilters {
+  status?: string;
+  transactionType?: string;
+  startDate?: Date;
+  endDate?: Date;
+}
+
+interface PaginationOptions {
+  page: number;
+  limit: number;
+  sortBy: string;
+  sortOrder: "asc" | "desc";
+}
+
 const getAllUserTransactions = async (
-  userId: string
+  userId: string,
+  filters: TransactionFilters = {},
+  options: PaginationOptions = {
+    page: 1,
+    limit: 10,
+    sortBy: "transactionDate",
+    sortOrder: "desc",
+  }
 ): Promise<CombinedTransaction[]> => {
   try {
     const userObjectId = new Types.ObjectId(userId);
 
-    // Fetch all transactions for the user
-    const transactions = await TransactionModel.find({
-      userId: userObjectId,
-    }).lean();
+    // Build query
+    const query: any = { userId: userObjectId };
+
+    // Apply filters
+    if (filters.status) {
+      query.status = filters.status;
+    }
+    if (filters.transactionType) {
+      query.transactionType = filters.transactionType;
+    }
+    if (filters.startDate || filters.endDate) {
+      query.transactionDate = {};
+      if (filters.startDate) {
+        query.transactionDate.$gte = filters.startDate;
+      }
+      if (filters.endDate) {
+        query.transactionDate.$lte = filters.endDate;
+      }
+    }
+
+    // Calculate skip value for pagination
+    const skip = (options.page - 1) * options.limit;
+
+    // Fetch all transactions for the user with pagination
+    const transactions = await TransactionModel.find(query)
+      .sort({ [options.sortBy]: options.sortOrder === "desc" ? -1 : 1 })
+      .skip(skip)
+      .limit(options.limit)
+      .lean();
 
     // Get IDs of share transactions
     const shareTransactionIds = transactions
@@ -84,21 +135,21 @@ const getAllUserTransactions = async (
           currency: t.currency,
           status: t.status,
           transactionDate: t.transactionDate,
-          /*shareTransaction: st
+          paymentMethod: t.paymentMethod,
+          taxAmount: t.taxAmount,
+          taxRate: t.taxRate,
+          discount: t.discount,
+          shareTransaction: st
             ? {
                 companyName: (st.companyId as any).name,
                 shareClassName: (st.shareClassId as any).name,
                 quantity: st.quantity,
                 pricePerShare: st.pricePerShare,
+                totalShares: st.quantity,
               }
-            : undefined,*/
+            : undefined,
         };
       }
-    );
-
-    // Sort combined transactions by transactionDate, most recent first
-    combinedTransactions.sort(
-      (a, b) => b.transactionDate.getTime() - a.transactionDate.getTime()
     );
 
     return combinedTransactions;
@@ -119,6 +170,8 @@ const getUserTransactions = async (
     throw new Error("Error fetching transactions.");
   }
 };
+
+export { TransactionFilters, PaginationOptions, CombinedTransaction };
 
 export default {
   createTransaction,
