@@ -370,10 +370,8 @@ const getCampaigns = async (req: Request, res: Response) => {
   try {
     const campaigns = await campaignService.getAllCampaigns();
 
-    // Transform campaigns into enhanced format and sort by closing date
     const enhancedCampaigns = campaigns
       .sort((a, b) => {
-        // Put campaigns without end dates at the end
         if (!a.investmentDetails?.closingDate) return 1;
         if (!b.investmentDetails?.closingDate) return -1;
         return (
@@ -382,7 +380,6 @@ const getCampaigns = async (req: Request, res: Response) => {
         );
       })
       .map((campaign) => {
-        // Calculate remaining days if end date exists
         let daysRemaining = null;
         const now = new Date();
         if (campaign.investmentDetails?.closingDate) {
@@ -397,12 +394,15 @@ const getCampaigns = async (req: Request, res: Response) => {
           description: campaign.campaignInfo?.description || "",
           companyName: campaign.campaignInfo?.name || "",
           tags: campaign.campaignInfo?.tags || [],
-          displayImage:
-            campaign.displayImages?.[0]?.image ||
-            "https://via.placeholder.com/150",
-          iconImage:
-            campaign.campaignInfo?.iconImage ||
-            "https://via.placeholder.com/32",
+          images: {
+            icon:
+              campaign.displayImages?.icon || "https://via.placeholder.com/64",
+            logo:
+              campaign.displayImages?.logo || "https://via.placeholder.com/150",
+            campaign:
+              campaign.displayImages?.campaign ||
+              "https://via.placeholder.com/1200",
+          },
           startDate: campaign.investmentDetails?.startDate || null,
           endDate: campaign.investmentDetails?.closingDate || null,
           daysRemaining: daysRemaining > 0 ? daysRemaining : 0,

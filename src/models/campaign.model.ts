@@ -30,9 +30,10 @@ interface IPerk {
   };
 }
 
-interface IDisplayImage {
-  image: string;
-  alt: string;
+interface IDisplayImages {
+  icon: string;
+  logo: string;
+  campaign: string;
 }
 
 interface IDocument {
@@ -55,11 +56,10 @@ export interface ICampaign {
     name: string;
     description: string;
     tags: string[];
-    iconImage?: string;
   };
+  displayImages: IDisplayImages;
   investmentDetails: IInvestmentDetails;
   perks?: IPerk[];
-  displayImages?: IDisplayImage[];
   documents?: IDocument[];
 }
 
@@ -105,10 +105,23 @@ const PerkSchema: Schema = new Schema({
   },
 });
 
-// Display Image Schema
-const DisplayImageSchema: Schema = new Schema({
-  image: { type: String, required: true },
-  alt: { type: String, required: true },
+// Display Images Schema
+const DisplayImagesSchema: Schema = new Schema({
+  icon: {
+    type: String,
+    required: true,
+    default: "https://via.placeholder.com/32",
+  },
+  logo: {
+    type: String,
+    required: true,
+    default: "https://via.placeholder.com/150",
+  },
+  campaign: {
+    type: String,
+    required: true,
+    default: "https://via.placeholder.com/1200",
+  },
 });
 
 // Document Schema
@@ -138,11 +151,10 @@ const CampaignSchema: Schema = new Schema(
       name: { type: String, required: true },
       description: { type: String, required: true },
       tags: [{ type: String }],
-      iconImage: { type: String },
     },
+    displayImages: { type: DisplayImagesSchema, required: true },
     investmentDetails: { type: InvestmentDetailsSchema, required: true },
     perks: [PerkSchema],
-    displayImages: [DisplayImageSchema],
     documents: [DocumentSchema],
   },
   { timestamps: true }
