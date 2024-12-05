@@ -370,44 +370,80 @@ const getCampaigns = async (req: Request, res: Response) => {
   try {
     const campaigns = await campaignService.getAllCampaigns();
 
-    const enhancedCampaigns = campaigns
-      .sort((a, b) => {
-        if (!a.investmentDetails?.closingDate) return 1;
-        if (!b.investmentDetails?.closingDate) return -1;
-        return (
-          new Date(a.investmentDetails.closingDate).getTime() -
-          new Date(b.investmentDetails.closingDate).getTime()
-        );
-      })
-      .map((campaign) => {
-        let daysRemaining = null;
-        const now = new Date();
-        if (campaign.investmentDetails?.closingDate) {
-          const endDate = new Date(campaign.investmentDetails.closingDate);
-          const diffTime = endDate.getTime() - now.getTime();
-          daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        }
+    const enhancedCampaigns = await Promise.all(
+      campaigns
+        .sort((a, b) => {
+          if (!a.investmentDetails?.closingDate) return 1;
+          if (!b.investmentDetails?.closingDate) return -1;
+          return (
+            new Date(a.investmentDetails.closingDate).getTime() -
+            new Date(b.investmentDetails.closingDate).getTime()
+          );
+        })
+        .map(async (campaign) => {
+          let daysRemaining = null;
+          const now = new Date();
+          if (campaign.investmentDetails?.closingDate) {
+            const endDate = new Date(campaign.investmentDetails.closingDate);
+            const diffTime = endDate.getTime() - now.getTime();
+            daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          }
 
-        return {
-          id: campaign._id,
-          title: campaign.campaignInfo?.name || "Unnamed Campaign",
-          description: campaign.campaignInfo?.description || "",
-          companyName: campaign.campaignInfo?.name || "",
-          tags: campaign.campaignInfo?.tags || [],
-          images: {
-            icon:
-              campaign.displayImages?.icon || "https://via.placeholder.com/64",
-            logo:
-              campaign.displayImages?.logo || "https://via.placeholder.com/150",
-            campaign:
-              campaign.displayImages?.campaign ||
-              "https://via.placeholder.com/1200",
-          },
-          startDate: campaign.investmentDetails?.startDate || null,
-          endDate: campaign.investmentDetails?.closingDate || null,
-          daysRemaining: daysRemaining > 0 ? daysRemaining : 0,
-        };
-      });
+          // Base campaign data without investment stats
+          const campaignData = {
+            id: campaign._id,
+            title: campaign.campaignInfo?.name || "Unnamed Campaign",
+            description: campaign.campaignInfo?.description || "",
+            companyName: campaign.campaignInfo?.name || "",
+            tags: campaign.campaignInfo?.tags || [],
+            images: {
+              icon:
+                campaign.displayImages?.icon ||
+                "https://via.placeholder.com/64",
+              logo:
+                campaign.displayImages?.logo ||
+                "https://via.placeholder.com/150",
+              campaign:
+                campaign.displayImages?.campaign ||
+                "https://via.placeholder.com/1200",
+            },
+            startDate: campaign.investmentDetails?.startDate || null,
+            endDate: campaign.investmentDetails?.closingDate || null,
+            daysRemaining: daysRemaining > 0 ? daysRemaining : 0,
+            status: campaign.investmentDetails.status,
+          };
+
+          // Only add investment stats for active campaigns
+          if (campaign.investmentDetails.status === "active") {
+            const totalInvestments = await campaignService.countInvestments(
+              campaign._id.toString()
+            );
+            const totalInvested = await campaignService.countInvested(
+              campaign._id.toString()
+            );
+            const targetAmount = campaign.investmentDetails.targetAmount;
+
+            // Calculate total amount including starting amount
+            const totalAmount =
+              campaign.investmentDetails.startAmount + totalInvested;
+
+            // Calculate percentage based on target amount
+            const percentageInvested =
+              targetAmount > 0
+                ? Math.round((totalAmount / targetAmount) * 100) / 100
+                : 0;
+
+            return {
+              ...campaignData,
+              totalInvestments,
+              totalInvested: totalAmount,
+              percentageInvested,
+            };
+          }
+
+          return campaignData;
+        })
+    );
 
     return res.status(200).json(enhancedCampaigns);
   } catch (error) {
