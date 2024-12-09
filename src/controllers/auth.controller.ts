@@ -10,7 +10,7 @@ import emailService from "../service/email.service";
 import UsersModel, { IUser } from "../models/users.model";
 
 //Logger
-import { userLogger } from "../logger";
+import { userLogger, vippsLogger } from "../logger";
 
 //Utils
 import {
@@ -378,30 +378,48 @@ const vippsLogin = async (req: Request, res: Response) => {
 };
 
 const vippsCallback = async (req: Request, res: Response) => {
-  console.log("vippsCallback");
+  vippsLogger.info("Vipps callback initiated");
   const { code } = req.query;
 
   if (!code || typeof code !== "string") {
-    userLogger.warn("Invalid or missing code in Vipps callback");
+    vippsLogger.warn("Invalid or missing code in Vipps callback");
     return res.status(BAD_REQUEST).json({
       status: BAD_REQUEST,
       success: false,
-      message: "Invalid or missing code",
+      message: "Invalid or missing authorization code",
     });
   }
 
   try {
+    vippsLogger.debug("Exchanging authorization code for user info", { code });
     const result = await authService.vippsCallback(code);
 
-    if (result.success && result.data) {
-      const userInfo = result.data;
+    if (!result.success || !result.data) {
+      vippsLogger.error("Failed to get user info from Vipps", {
+        success: result.success,
+        message: result.message,
+      });
+      return res.status(UNAUTHORIZED).json({
+        status: UNAUTHORIZED,
+        success: false,
+        message: "Failed to authenticate with Vipps",
+      });
+    }
 
-      console.log("userInfo", userInfo);
+    const userInfo = result.data;
+    vippsLogger.info("Received user info from Vipps", {
+      email: userInfo.email,
+      sub: userInfo.sub,
+    });
 
+    try {
       let user = await userService.getUserByEmail(userInfo.email);
 
       if (!user) {
-        // create a new user
+        vippsLogger.info("Creating new user from Vipps login", {
+          email: userInfo.email,
+        });
+
         const newUser: IUser = {
           firstName: userInfo.given_name,
           lastName: userInfo.family_name,
@@ -420,36 +438,45 @@ const vippsCallback = async (req: Request, res: Response) => {
               ],
             },
           ],
-          password: "", // Consider setting a random password or handling this differently
+          password: "",
           address: {
-            street: userInfo.address.street_address || null,
-            city: userInfo.address.region || null,
-            postalCode: userInfo.address.postal_code || null,
-            country: userInfo.address.country || null,
+            street: userInfo.address?.street_address || null,
+            city: userInfo.address?.region || null,
+            postalCode: userInfo.address?.postal_code || null,
+            country: userInfo.address?.country || null,
           },
           primaryPhoneNumber: userInfo.phone_number || null,
         };
 
         const createdUser = await authService.createUser(newUser);
-        if (createdUser) {
-          user = createdUser.user;
-        } else {
+        if (!createdUser) {
+          vippsLogger.error("Failed to create new user", {
+            email: userInfo.email,
+          });
           throw new Error("Failed to create new user");
         }
+        user = createdUser.user;
+        vippsLogger.info("Successfully created new user", {
+          userId: user._id.toString(),
+        });
+      } else {
+        vippsLogger.info("Existing user found", {
+          userId: user._id.toString(),
+        });
       }
-
-      console.log("user", user._id.toString());
 
       // Create a session for the user
       const session = await sessionService.createSession(user._id.toString());
+      vippsLogger.debug("Created new session", {
+        sessionId: session._id.toString(),
+      });
 
-      // Create access token
+      // Create tokens
       const accessToken = signToken({
         userId: user._id.toString(),
         sessionId: session._id.toString(),
       });
 
-      // Create refresh token
       const refreshToken = signToken(
         {
           sessionId: session._id.toString(),
@@ -457,23 +484,32 @@ const vippsCallback = async (req: Request, res: Response) => {
         refreshTokenOptions
       );
 
-      userLogger.info("Vipps authentication successful", {
-        userId: userInfo.sub,
+      vippsLogger.info("Vipps authentication successful", {
+        userId: user._id.toString(),
+        sessionId: session._id.toString(),
       });
 
-      return res.redirect(
-        `${process.env.CLIENT_BASE_URL}/api/auth/callback/vipps?accessToken=${accessToken}&refreshToken=${refreshToken}`
+      // Redirect with tokens
+      const redirectUrl = new URL(
+        `${process.env.CLIENT_BASE_URL}/api/auth/callback/vipps`
       );
-    } else {
-      userLogger.warn("Vipps authentication failed", { error: result.message });
-      return res.status(UNAUTHORIZED).json({
-        status: UNAUTHORIZED,
-        success: false,
-        message: result.message || "Vipps authentication failed",
+      redirectUrl.searchParams.append("accessToken", accessToken);
+      redirectUrl.searchParams.append("refreshToken", refreshToken);
+
+      return res.redirect(redirectUrl.toString());
+    } catch (error) {
+      vippsLogger.error("Error processing user data", {
+        error: error instanceof Error ? error.message : "Unknown error",
+        email: userInfo.email,
       });
+      throw error;
     }
   } catch (error) {
-    userLogger.error("Error in Vipps callback", { error: error.message });
+    vippsLogger.error("Vipps callback failed", {
+      error: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+
     return res.status(INTERNAL_SERVER_ERROR).json({
       status: INTERNAL_SERVER_ERROR,
       success: false,
