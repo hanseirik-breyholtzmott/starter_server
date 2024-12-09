@@ -378,7 +378,12 @@ const vippsLogin = async (req: Request, res: Response) => {
 };
 
 const vippsCallback = async (req: Request, res: Response) => {
-  vippsLogger.info("Vipps callback initiated");
+  vippsLogger.info("Vipps callback initiated", {
+    code: req.query.code,
+    scope: req.query.scope,
+    state: req.query.state,
+  });
+
   const { code } = req.query;
 
   if (!code || typeof code !== "string") {
@@ -394,15 +399,24 @@ const vippsCallback = async (req: Request, res: Response) => {
     vippsLogger.debug("Exchanging authorization code for user info", { code });
     const result = await authService.vippsCallback(code);
 
+    // Log the entire result for debugging
+    vippsLogger.debug("Vipps callback result", {
+      result: JSON.stringify(result),
+      success: result.success,
+      hasData: !!result.data,
+    });
+
     if (!result.success || !result.data) {
       vippsLogger.error("Failed to get user info from Vipps", {
         success: result.success,
         message: result.message,
+        error: result.error, // Add this if available in the result
       });
       return res.status(UNAUTHORIZED).json({
         status: UNAUTHORIZED,
         success: false,
         message: "Failed to authenticate with Vipps",
+        details: result.message,
       });
     }
 
@@ -505,15 +519,21 @@ const vippsCallback = async (req: Request, res: Response) => {
       throw error;
     }
   } catch (error) {
+    // Enhanced error logging
     vippsLogger.error("Vipps callback failed", {
       error: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined,
+      code: req.query.code,
+      scope: req.query.scope,
+      state: req.query.state,
+      fullError: error instanceof Error ? JSON.stringify(error) : error,
     });
 
     return res.status(INTERNAL_SERVER_ERROR).json({
       status: INTERNAL_SERVER_ERROR,
       success: false,
       message: "An error occurred during Vipps authentication",
+      details: error instanceof Error ? error.message : "Unknown error",
     });
   }
 };

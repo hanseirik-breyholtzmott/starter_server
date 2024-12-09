@@ -518,16 +518,25 @@ const vippsLogin = async () => {
   }
 };
 
+interface VippsTokenResponse {
+  success: boolean;
+  message: string;
+  access_token?: string;
+  error?: string;
+}
+
 interface VippsCallbackResponse {
   success: boolean;
   message: string;
   data?: any;
+  error?: string;
 }
 
 interface VippsUserInfoResponse {
   success: boolean;
   message: string;
   data?: any;
+  error?: string;
 }
 
 //Vipps user info
@@ -568,32 +577,32 @@ export const vippsUserInfo = async (
   }
 };
 
-//Vipps callback
-export const vippsCallback = async (
-  code: string
-): Promise<VippsCallbackResponse> => {
-  const baseURL = true
-    ? "https://api.vipps.no/access-management-1.0/access/oauth2/token"
-    : "https://apitest.vipps.no/access-management-1.0/access/oauth2/token";
-
-  vippsLogger.info("Initiating Vipps callback", { code });
+const getVippsToken = async (code: string): Promise<VippsTokenResponse> => {
+  const baseURL =
+    "https://api.vipps.no/access-management-1.0/access/oauth2/token";
 
   try {
+    vippsLogger.debug("Requesting Vipps token", {
+      clientId: process.env.VIPPS_CLIENT_ID,
+      redirectUri: process.env.VIPPS_REDIRECT_URI,
+    });
+
     const response = await axios.post(
       baseURL,
       new URLSearchParams({
         grant_type: "authorization_code",
         code: code,
         redirect_uri: process.env.VIPPS_REDIRECT_URI!,
-      }),
+      }).toString(),
       {
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
           "Merchant-Serial-Number": process.env.VIPPS_MSN!,
-          "Vipps-System-Name": "acme",
-          "Vipps-System-Version": "3.1.2",
-          "Vipps-System-Plugin-Name": "acme-webshop",
-          "Vipps-System-Plugin-Version": "4.5.6",
+          "Vipps-System-Name": "folkekraft",
+          "Vipps-System-Version": "1.0.0",
+          "Vipps-System-Plugin-Name": "folkekraft-api",
+          "Vipps-System-Plugin-Version": "1.0.0",
+          "Ocp-Apim-Subscription-Key": process.env.VIPPS_SUBSCRIPTION_KEY!,
         },
         auth: {
           username: process.env.VIPPS_CLIENT_ID!,
@@ -602,32 +611,106 @@ export const vippsCallback = async (
       }
     );
 
+    vippsLogger.debug("Vipps token response", {
+      statusCode: response.status,
+      hasAccessToken: !!response.data.access_token,
+    });
+
     if (response.data.access_token) {
-      const { access_token } = response.data;
-
-      const userInfoResponse = await vippsUserInfo(access_token);
-
-      vippsLogger.info("Vipps callback successful", {
-        userId: userInfoResponse.data.sub,
-      });
-
       return {
         success: true,
-        message: "Vipps authentication successful",
-        data: userInfoResponse.data,
+        message: "Successfully retrieved access token",
+        access_token: response.data.access_token,
       };
     } else {
-      vippsLogger.error("Access token not found in Vipps response");
+      vippsLogger.error("No access token in response", {
+        response: response.data,
+      });
       return {
         success: false,
-        message: "Error exchanging code for token",
+        message: "No access token in response",
+        error: "Missing access token",
       };
     }
   } catch (error) {
-    vippsLogger.error("Error during Vipps callback", { error });
+    if (axios.isAxiosError(error)) {
+      vippsLogger.error("Axios error getting Vipps token", {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        config: {
+          url: error.config?.url,
+          method: error.config?.method,
+          headers: error.config?.headers,
+          data: error.config?.data,
+        },
+      });
+      return {
+        success: false,
+        message: `Failed to get token: ${
+          error.response?.data?.error_description || error.message
+        }`,
+        error: error.response?.data?.error || error.message,
+      };
+    } else {
+      vippsLogger.error("Unknown error getting Vipps token", {
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+      return {
+        success: false,
+        message: "Failed to get token due to unknown error",
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+  }
+};
+
+//Vipps callback
+export const vippsCallback = async (
+  code: string
+): Promise<VippsCallbackResponse> => {
+  try {
+    vippsLogger.debug("Starting Vipps callback process", { code });
+
+    const tokenResponse = await getVippsToken(code);
+    if (!tokenResponse.success) {
+      vippsLogger.error("Failed to get Vipps token", {
+        error: tokenResponse.error,
+      });
+      return {
+        success: false,
+        message: "Failed to exchange code for token",
+        error: tokenResponse.error,
+      };
+    }
+
+    const userInfoResponse = await vippsUserInfo(tokenResponse.access_token);
+    if (!userInfoResponse.success) {
+      vippsLogger.error("Failed to get user info", {
+        error: userInfoResponse.error,
+      });
+      return {
+        success: false,
+        message: "Failed to get user information",
+        error: userInfoResponse.error,
+      };
+    }
+
+    return {
+      success: true,
+      message: "Successfully retrieved user info",
+      data: userInfoResponse.data,
+    };
+  } catch (error) {
+    vippsLogger.error("Error in vippsCallback", {
+      error: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+
     return {
       success: false,
-      message: "Error exchanging code for token",
+      message: "Internal server error during Vipps authentication",
+      error: error instanceof Error ? error.message : "Unknown error",
     };
   }
 };
