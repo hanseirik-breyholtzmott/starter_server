@@ -399,29 +399,12 @@ const vippsCallback = async (req: Request, res: Response) => {
     );
 
     if (!result.success) {
-      // Handle user cancellation
-      if (result.error === "access_denied") {
-        return res.redirect(`${clientUrl}/sign-in?status=cancelled`);
-      }
-
-      // Handle authentication errors
-      if (result.error === "unauthorized" || result.error === "bad_request") {
-        return res.redirect(
-          `${clientUrl}/sign-in?status=auth_failed&message=${encodeURIComponent(
-            "Could not authenticate with Vipps. Please try again."
-          )}`
-        );
-      }
-
-      // Handle other errors
-      return res.redirect(
-        `${clientUrl}/sign-in?status=error&message=${encodeURIComponent(
-          "An error occurred during login. Please try again or contact support."
-        )}`
-      );
+      const redirectUrl = `${clientUrl}/sign-in?status=error&message=${encodeURIComponent(
+        result.message
+      )}`;
+      return res.redirect(redirectUrl);
     }
 
-    // Success case - continue with user creation/login
     const userInfo = result.data;
     try {
       let user = await userService.getUserByEmail(userInfo.email);
@@ -461,28 +444,12 @@ const vippsCallback = async (req: Request, res: Response) => {
 
         const createdUser = await authService.createUser(newUser);
         if (!createdUser) {
-          vippsLogger.error("Failed to create new user", {
-            email: userInfo.email,
-          });
           throw new Error("Failed to create new user");
         }
         user = createdUser.user;
-        vippsLogger.info("Successfully created new user", {
-          userId: user._id.toString(),
-        });
-      } else {
-        vippsLogger.info("Existing user found", {
-          userId: user._id.toString(),
-        });
       }
 
-      // Create a session for the user
       const session = await sessionService.createSession(user._id.toString());
-      vippsLogger.debug("Created new session", {
-        sessionId: session._id.toString(),
-      });
-
-      // Create tokens
       const accessToken = signToken({
         userId: user._id.toString(),
         sessionId: session._id.toString(),
@@ -495,12 +462,6 @@ const vippsCallback = async (req: Request, res: Response) => {
         refreshTokenOptions
       );
 
-      vippsLogger.info("Vipps authentication successful", {
-        userId: user._id.toString(),
-        sessionId: session._id.toString(),
-      });
-
-      // On successful authentication
       const redirectUrl = new URL(`${clientUrl}/auth/callback/vipps`);
       redirectUrl.searchParams.append("accessToken", accessToken);
       redirectUrl.searchParams.append("refreshToken", refreshToken);
@@ -508,11 +469,6 @@ const vippsCallback = async (req: Request, res: Response) => {
 
       return res.redirect(redirectUrl.toString());
     } catch (error) {
-      vippsLogger.error("Error processing user data", {
-        error: error instanceof Error ? error.message : "Unknown error",
-        email: userInfo.email,
-      });
-
       return res.redirect(
         `${clientUrl}/sign-in?status=error&message=${encodeURIComponent(
           "Error processing login. Please try again or contact support."
@@ -520,14 +476,6 @@ const vippsCallback = async (req: Request, res: Response) => {
       );
     }
   } catch (error) {
-    vippsLogger.error("Vipps callback failed", {
-      error: error instanceof Error ? error.message : "Unknown error",
-      stack: error instanceof Error ? error.stack : undefined,
-      code: req.query.code,
-      scope: req.query.scope,
-      state: req.query.state,
-    });
-
     return res.redirect(
       `${clientUrl}/sign-in?status=error&message=${encodeURIComponent(
         "An unexpected error occurred. Please try again later."

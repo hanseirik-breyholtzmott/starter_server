@@ -541,83 +541,29 @@ interface VippsUserInfoResponse {
   details?: string;
 }
 
-//Vipps user info
-export const vippsUserInfo = async (
-  accessToken: string
-): Promise<VippsUserInfoResponse> => {
+// Define a type for the OpenID configuration
+interface OpenIDConfig {
+  authorization_endpoint: string;
+  token_endpoint: string;
+  userinfo_endpoint: string;
+}
+
+// Function to fetch OpenID configuration
+const fetchOpenIDConfig = async (): Promise<OpenIDConfig> => {
   const isProduction = process.env.NODE_ENV === "production";
-  const baseURL = isProduction
-    ? "https://api.vipps.no/vipps-userinfo-api/userinfo"
-    : "https://apitest.vipps.no/vipps-userinfo-api/userinfo";
+  const configUrl = isProduction
+    ? "https://api.vipps.no/access-management-1.0/access/.well-known/openid-configuration"
+    : "https://apitest.vipps.no/access-management-1.0/access/.well-known/openid-configuration";
 
-  vippsLogger.debug("Fetching Vipps user info", {
-    environment: isProduction ? "production" : "test",
-    baseURL,
-  });
-
-  try {
-    const headers = {
-      Authorization: `Bearer ${accessToken}`,
-      "Ocp-Apim-Subscription-Key": process.env.VIPPS_SUBSCRIPTION_KEY!,
-      "Merchant-Serial-Number": process.env.VIPPS_MSN!,
-      "Vipps-System-Name": "folkekraft",
-      "Vipps-System-Version": "1.0.0",
-      "Vipps-System-Plugin-Name": "folkekraft-api",
-      "Vipps-System-Plugin-Version": "1.0.0",
-    };
-
-    vippsLogger.debug("User info request headers", {
-      headers: {
-        ...headers,
-        "Ocp-Apim-Subscription-Key": "****",
-      },
-    });
-
-    const response = await axios.get(baseURL, { headers });
-
-    vippsLogger.debug("Vipps user info response", {
-      status: response.status,
-      hasData: !!response.data,
-    });
-
-    return {
-      success: true,
-      message: "User info retrieved",
-      data: response.data,
-    };
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-      vippsLogger.error("Error fetching Vipps user info", {
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-      });
-    } else {
-      vippsLogger.error("Unknown error fetching Vipps user info", {
-        error: error instanceof Error ? error.message : "Unknown error",
-      });
-    }
-    return {
-      success: false,
-      message: "Error retrieving user info",
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
-  }
+  const response = await axios.get(configUrl);
+  return response.data;
 };
 
+// Function to get Vipps token
 const getVippsToken = async (code: string): Promise<VippsTokenResponse> => {
-  const isProduction = process.env.NODE_ENV === "production";
-  const baseURL = isProduction
-    ? "https://api.vipps.no/access-management-1.0/access/oauth2/token"
-    : "https://apitest.vipps.no/access-management-1.0/access/oauth2/token";
-
-  vippsLogger.debug("Using Vipps environment", {
-    environment: isProduction ? "production" : "test",
-    baseURL,
-  });
-
   try {
-    // Verify headers before making the request
+    const { token_endpoint } = await fetchOpenIDConfig();
+
     const headers = {
       "Content-Type": "application/x-www-form-urlencoded",
       "Merchant-Serial-Number": process.env.VIPPS_MSN!,
@@ -628,15 +574,8 @@ const getVippsToken = async (code: string): Promise<VippsTokenResponse> => {
       "Ocp-Apim-Subscription-Key": process.env.VIPPS_SUBSCRIPTION_KEY!,
     };
 
-    vippsLogger.debug("Request headers", {
-      headers: {
-        ...headers,
-        "Ocp-Apim-Subscription-Key": "****", // Mask the full key in logs
-      },
-    });
-
     const response = await axios.post(
-      baseURL,
+      token_endpoint,
       new URLSearchParams({
         grant_type: "authorization_code",
         code: code,
@@ -651,11 +590,6 @@ const getVippsToken = async (code: string): Promise<VippsTokenResponse> => {
       }
     );
 
-    vippsLogger.debug("Vipps token response", {
-      statusCode: response.status,
-      hasAccessToken: !!response.data.access_token,
-    });
-
     if (response.data.access_token) {
       return {
         success: true,
@@ -663,9 +597,6 @@ const getVippsToken = async (code: string): Promise<VippsTokenResponse> => {
         access_token: response.data.access_token,
       };
     } else {
-      vippsLogger.error("No access token in response", {
-        response: response.data,
-      });
       return {
         success: false,
         message: "No access token in response",
@@ -673,82 +604,74 @@ const getVippsToken = async (code: string): Promise<VippsTokenResponse> => {
       };
     }
   } catch (error) {
-    if (axios.isAxiosError(error)) {
-      vippsLogger.error("Axios error getting Vipps token", {
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        config: {
-          url: error.config?.url,
-          method: error.config?.method,
-          headers: error.config?.headers,
-          data: error.config?.data,
-        },
-      });
-      return {
-        success: false,
-        message: `Failed to get token: ${
-          error.response?.data?.error_description || error.message
-        }`,
-        error: error.response?.data?.error || error.message,
-      };
-    } else {
-      vippsLogger.error("Unknown error getting Vipps token", {
-        error: error instanceof Error ? error.message : "Unknown error",
-      });
-      return {
-        success: false,
-        message: "Failed to get token due to unknown error",
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
-    }
+    return handleAxiosError(error, "Failed to get token");
   }
 };
 
-// Add these types for Vipps errors
-type VippsErrorCode =
-  | "access_denied"
-  | "server_error"
-  | "login_required"
-  | "invalid_app_callback_uri"
-  | "app_callback_uri_not_registered"
-  | "outdated_app_version"
-  | "wrong_challenge"
-  | "unknown_reject_reason"
-  | string; // for undocumented errors
+// Function to get Vipps user info
+export const vippsUserInfo = async (
+  accessToken: string
+): Promise<VippsUserInfoResponse> => {
+  try {
+    const { userinfo_endpoint } = await fetchOpenIDConfig();
 
-interface VippsError {
-  error: VippsErrorCode;
+    const headers = {
+      Authorization: `Bearer ${accessToken}`,
+      "Ocp-Apim-Subscription-Key": process.env.VIPPS_SUBSCRIPTION_KEY!,
+      "Merchant-Serial-Number": process.env.VIPPS_MSN!,
+      "Vipps-System-Name": "folkekraft",
+      "Vipps-System-Version": "1.0.0",
+      "Vipps-System-Plugin-Name": "folkekraft-api",
+      "Vipps-System-Plugin-Version": "1.0.0",
+    };
+
+    const response = await axios.get(userinfo_endpoint, { headers });
+
+    return {
+      success: true,
+      message: "User info retrieved",
+      data: response.data,
+    };
+  } catch (error) {
+    return handleAxiosError(error, "Error retrieving user info");
+  }
+};
+
+// Helper function to handle Axios errors
+const handleAxiosError = (error: any, defaultMessage: string) => {
+  if (axios.isAxiosError(error)) {
+    return {
+      success: false,
+      message: `${defaultMessage}: ${
+        error.response?.data?.error_description || error.message
+      }`,
+      error: error.response?.data?.error || error.message,
+    };
+  } else {
+    return {
+      success: false,
+      message: defaultMessage,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+};
+
+// Define the handleVippsError function
+const handleVippsError = ({
+  error,
+  error_description,
+  state,
+}: {
+  error: string;
   error_description?: string;
   state?: string;
-}
-
-const handleVippsError = (error: VippsError): VippsCallbackResponse => {
-  const errorMessages: Record<VippsErrorCode, string> = {
-    access_denied: "User cancelled the login",
-    server_error: "Vipps server error, please try again",
-    login_required: "User must log in with interaction",
-    invalid_app_callback_uri: "Invalid callback URI format",
-    app_callback_uri_not_registered: "Callback URI not registered",
-    outdated_app_version: "Please update your Vipps or MobilePay app",
-    wrong_challenge: "Wrong challenge selected",
-    unknown_reject_reason: "Authentication failed for unknown reason",
-  };
-
-  const message =
-    errorMessages[error.error] || `Vipps authentication error: ${error.error}`;
-
-  vippsLogger.error("Vipps authentication error", {
-    errorCode: error.error,
-    description: error.error_description,
-    state: error.state,
-  });
-
+}): VippsCallbackResponse => {
+  vippsLogger.error("Vipps error", { error, error_description, state });
   return {
     success: false,
-    message,
-    error: error.error,
-    details: error.error_description,
+    message: "Vipps error occurred",
+    error,
+    details: error_description,
   };
 };
 
