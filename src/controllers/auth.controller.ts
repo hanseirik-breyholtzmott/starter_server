@@ -380,44 +380,36 @@ const vippsLogin = async (req: Request, res: Response) => {
 const vippsCallback = async (req: Request, res: Response) => {
   vippsLogger.info("Vipps callback initiated", {
     code: req.query.code,
+    error: req.query.error,
+    errorDescription: req.query.error_description,
     scope: req.query.scope,
     state: req.query.state,
   });
 
-  const { code } = req.query;
-
-  if (!code || typeof code !== "string") {
-    vippsLogger.warn("Invalid or missing code in Vipps callback");
-    return res.status(BAD_REQUEST).json({
-      status: BAD_REQUEST,
-      success: false,
-      message: "Invalid or missing authorization code",
-    });
-  }
+  const { code, error, error_description, state } = req.query;
 
   try {
-    vippsLogger.debug("Exchanging authorization code for user info", { code });
-    const result = await authService.vippsCallback(code);
+    const result = await authService.vippsCallback(
+      code as string,
+      error as string,
+      error_description as string,
+      state as string
+    );
 
-    // Log the entire result for debugging
-    vippsLogger.debug("Vipps callback result", {
-      result: JSON.stringify(result),
-      success: result.success,
-      hasData: !!result.data,
-    });
+    if (!result.success) {
+      // Handle user cancellation differently
+      if (result.error === "access_denied") {
+        return res.redirect(
+          `${process.env.CLIENT_BASE_URL}/login?error=cancelled`
+        );
+      }
 
-    if (!result.success || !result.data) {
-      vippsLogger.error("Failed to get user info from Vipps", {
-        success: result.success,
-        message: result.message,
-        error: result.error, // Add this if available in the result
-      });
-      return res.status(UNAUTHORIZED).json({
-        status: UNAUTHORIZED,
-        success: false,
-        message: "Failed to authenticate with Vipps",
-        details: result.message,
-      });
+      // Handle other errors
+      return res.redirect(
+        `${process.env.CLIENT_BASE_URL}/login?error=${encodeURIComponent(
+          result.error || "unknown"
+        )}&message=${encodeURIComponent(result.message)}`
+      );
     }
 
     const userInfo = result.data;

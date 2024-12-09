@@ -530,6 +530,7 @@ interface VippsCallbackResponse {
   message: string;
   data?: any;
   error?: string;
+  details?: string;
 }
 
 interface VippsUserInfoResponse {
@@ -537,42 +538,69 @@ interface VippsUserInfoResponse {
   message: string;
   data?: any;
   error?: string;
+  details?: string;
 }
 
 //Vipps user info
 export const vippsUserInfo = async (
   accessToken: string
 ): Promise<VippsUserInfoResponse> => {
-  const baseURL = true
+  const isProduction = process.env.NODE_ENV === "production";
+  const baseURL = isProduction
     ? "https://api.vipps.no/vipps-userinfo-api/userinfo"
     : "https://apitest.vipps.no/vipps-userinfo-api/userinfo";
 
-  vippsLogger.info("Fetching Vipps user info");
+  vippsLogger.debug("Fetching Vipps user info", {
+    environment: isProduction ? "production" : "test",
+    baseURL,
+  });
 
   try {
-    const response = await axios.get(baseURL, {
+    const headers = {
+      Authorization: `Bearer ${accessToken}`,
+      "Ocp-Apim-Subscription-Key": process.env.VIPPS_SUBSCRIPTION_KEY!,
+      "Merchant-Serial-Number": process.env.VIPPS_MSN!,
+      "Vipps-System-Name": "folkekraft",
+      "Vipps-System-Version": "1.0.0",
+      "Vipps-System-Plugin-Name": "folkekraft-api",
+      "Vipps-System-Plugin-Version": "1.0.0",
+    };
+
+    vippsLogger.debug("User info request headers", {
       headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Ocp-Apim-Subscription-Key": process.env.VIPPS_SUBSCRIPTION_KEY!,
-        "Merchant-Serial-Number": process.env.VIPPS_MSN!,
-        "Vipps-System-Name": "acme",
-        "Vipps-System-Version": "3.1.2",
-        "Vipps-System-Plugin-Name": "acme-webshop",
-        "Vipps-System-Plugin-Version": "4.5.6",
+        ...headers,
+        "Ocp-Apim-Subscription-Key": "****",
       },
     });
 
-    vippsLogger.info("Vipps user info retrieved successfully");
+    const response = await axios.get(baseURL, { headers });
+
+    vippsLogger.debug("Vipps user info response", {
+      status: response.status,
+      hasData: !!response.data,
+    });
+
     return {
       success: true,
       message: "User info retrieved",
       data: response.data,
     };
   } catch (error) {
-    vippsLogger.error("Error fetching Vipps user info", { error });
+    if (axios.isAxiosError(error)) {
+      vippsLogger.error("Error fetching Vipps user info", {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+      });
+    } else {
+      vippsLogger.error("Unknown error fetching Vipps user info", {
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
     return {
       success: false,
       message: "Error retrieving user info",
+      error: error instanceof Error ? error.message : "Unknown error",
     };
   }
 };
@@ -677,10 +705,65 @@ const getVippsToken = async (code: string): Promise<VippsTokenResponse> => {
   }
 };
 
+// Add these types for Vipps errors
+type VippsErrorCode =
+  | "access_denied"
+  | "server_error"
+  | "login_required"
+  | "invalid_app_callback_uri"
+  | "app_callback_uri_not_registered"
+  | "outdated_app_version"
+  | "wrong_challenge"
+  | "unknown_reject_reason"
+  | string; // for undocumented errors
+
+interface VippsError {
+  error: VippsErrorCode;
+  error_description?: string;
+  state?: string;
+}
+
+const handleVippsError = (error: VippsError): VippsCallbackResponse => {
+  const errorMessages: Record<VippsErrorCode, string> = {
+    access_denied: "User cancelled the login",
+    server_error: "Vipps server error, please try again",
+    login_required: "User must log in with interaction",
+    invalid_app_callback_uri: "Invalid callback URI format",
+    app_callback_uri_not_registered: "Callback URI not registered",
+    outdated_app_version: "Please update your Vipps or MobilePay app",
+    wrong_challenge: "Wrong challenge selected",
+    unknown_reject_reason: "Authentication failed for unknown reason",
+  };
+
+  const message =
+    errorMessages[error.error] || `Vipps authentication error: ${error.error}`;
+
+  vippsLogger.error("Vipps authentication error", {
+    errorCode: error.error,
+    description: error.error_description,
+    state: error.state,
+  });
+
+  return {
+    success: false,
+    message,
+    error: error.error,
+    details: error.error_description,
+  };
+};
+
 //Vipps callback
 export const vippsCallback = async (
-  code: string
+  code: string,
+  error?: string,
+  error_description?: string,
+  state?: string
 ): Promise<VippsCallbackResponse> => {
+  // Handle Vipps-specific errors first
+  if (error) {
+    return handleVippsError({ error, error_description, state });
+  }
+
   try {
     vippsLogger.debug("Starting Vipps callback process", { code });
 
@@ -714,7 +797,46 @@ export const vippsCallback = async (
       data: userInfoResponse.data,
     };
   } catch (error) {
-    vippsLogger.error("Error in vippsCallback", {
+    if (axios.isAxiosError(error)) {
+      const status = error.response?.status;
+      const errorData = error.response?.data;
+
+      vippsLogger.error("Vipps API error", {
+        status,
+        data: errorData,
+        config: {
+          url: error.config?.url,
+          method: error.config?.method,
+        },
+      });
+
+      // Handle specific HTTP status codes
+      switch (status) {
+        case 401:
+          return {
+            success: false,
+            message: "Authentication failed with Vipps",
+            error: "unauthorized",
+            details: errorData?.message,
+          };
+        case 400:
+          return {
+            success: false,
+            message: "Invalid request to Vipps",
+            error: "bad_request",
+            details: errorData?.message,
+          };
+        default:
+          return {
+            success: false,
+            message: "Error communicating with Vipps",
+            error: "api_error",
+            details: errorData?.message,
+          };
+      }
+    }
+
+    vippsLogger.error("Unexpected error in vippsCallback", {
       error: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined,
     });
@@ -722,7 +844,8 @@ export const vippsCallback = async (
     return {
       success: false,
       message: "Internal server error during Vipps authentication",
-      error: error instanceof Error ? error.message : "Unknown error",
+      error: "internal_error",
+      details: error instanceof Error ? error.message : "Unknown error",
     };
   }
 };
