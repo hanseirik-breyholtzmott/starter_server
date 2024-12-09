@@ -578,13 +578,33 @@ export const vippsUserInfo = async (
 };
 
 const getVippsToken = async (code: string): Promise<VippsTokenResponse> => {
-  const baseURL =
-    "https://api.vipps.no/access-management-1.0/access/oauth2/token";
+  const isProduction = process.env.NODE_ENV === "production";
+  const baseURL = isProduction
+    ? "https://api.vipps.no/access-management-1.0/access/oauth2/token"
+    : "https://apitest.vipps.no/access-management-1.0/access/oauth2/token";
+
+  vippsLogger.debug("Using Vipps environment", {
+    environment: isProduction ? "production" : "test",
+    baseURL,
+  });
 
   try {
-    vippsLogger.debug("Requesting Vipps token", {
-      clientId: process.env.VIPPS_CLIENT_ID,
-      redirectUri: process.env.VIPPS_REDIRECT_URI,
+    // Verify headers before making the request
+    const headers = {
+      "Content-Type": "application/x-www-form-urlencoded",
+      "Merchant-Serial-Number": process.env.VIPPS_MSN!,
+      "Vipps-System-Name": "folkekraft",
+      "Vipps-System-Version": "1.0.0",
+      "Vipps-System-Plugin-Name": "folkekraft-api",
+      "Vipps-System-Plugin-Version": "1.0.0",
+      "Ocp-Apim-Subscription-Key": process.env.VIPPS_SUBSCRIPTION_KEY!,
+    };
+
+    vippsLogger.debug("Request headers", {
+      headers: {
+        ...headers,
+        "Ocp-Apim-Subscription-Key": "****", // Mask the full key in logs
+      },
     });
 
     const response = await axios.post(
@@ -595,15 +615,7 @@ const getVippsToken = async (code: string): Promise<VippsTokenResponse> => {
         redirect_uri: process.env.VIPPS_REDIRECT_URI!,
       }).toString(),
       {
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          "Merchant-Serial-Number": process.env.VIPPS_MSN!,
-          "Vipps-System-Name": "folkekraft",
-          "Vipps-System-Version": "1.0.0",
-          "Vipps-System-Plugin-Name": "folkekraft-api",
-          "Vipps-System-Plugin-Version": "1.0.0",
-          "Ocp-Apim-Subscription-Key": process.env.VIPPS_SUBSCRIPTION_KEY!,
-        },
+        headers,
         auth: {
           username: process.env.VIPPS_CLIENT_ID!,
           password: process.env.VIPPS_CLIENT_SECRET!,
