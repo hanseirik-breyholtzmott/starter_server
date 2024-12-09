@@ -702,6 +702,8 @@ export const vippsCallback = async (
       };
     }
 
+    console.log("tokenResponse", tokenResponse);
+
     const userInfoResponse = await vippsUserInfo(tokenResponse.access_token);
     if (!userInfoResponse.success) {
       vippsLogger.error("Failed to get user info", {
