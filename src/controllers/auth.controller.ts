@@ -387,6 +387,8 @@ const vippsCallback = async (req: Request, res: Response) => {
   });
 
   const { code, error, error_description, state } = req.query;
+  const clientUrl =
+    process.env.CLIENT_BASE_URL || "https://invest.folkekraft.no";
 
   try {
     const result = await authService.vippsCallback(
@@ -397,27 +399,30 @@ const vippsCallback = async (req: Request, res: Response) => {
     );
 
     if (!result.success) {
-      // Handle user cancellation differently
+      // Handle user cancellation
       if (result.error === "access_denied") {
+        return res.redirect(`${clientUrl}/sign-in?status=cancelled`);
+      }
+
+      // Handle authentication errors
+      if (result.error === "unauthorized" || result.error === "bad_request") {
         return res.redirect(
-          `${process.env.CLIENT_BASE_URL}/login?error=cancelled`
+          `${clientUrl}/sign-in?status=auth_failed&message=${encodeURIComponent(
+            "Could not authenticate with Vipps. Please try again."
+          )}`
         );
       }
 
       // Handle other errors
       return res.redirect(
-        `${process.env.CLIENT_BASE_URL}/login?error=${encodeURIComponent(
-          result.error || "unknown"
-        )}&message=${encodeURIComponent(result.message)}`
+        `${clientUrl}/sign-in?status=error&message=${encodeURIComponent(
+          "An error occurred during login. Please try again or contact support."
+        )}`
       );
     }
 
+    // Success case - continue with user creation/login
     const userInfo = result.data;
-    vippsLogger.info("Received user info from Vipps", {
-      email: userInfo.email,
-      sub: userInfo.sub,
-    });
-
     try {
       let user = await userService.getUserByEmail(userInfo.email);
 
@@ -495,12 +500,11 @@ const vippsCallback = async (req: Request, res: Response) => {
         sessionId: session._id.toString(),
       });
 
-      // Redirect with tokens
-      const redirectUrl = new URL(
-        `${process.env.CLIENT_BASE_URL}/api/auth/callback/vipps`
-      );
+      // On successful authentication
+      const redirectUrl = new URL(`${clientUrl}/auth/callback/vipps`);
       redirectUrl.searchParams.append("accessToken", accessToken);
       redirectUrl.searchParams.append("refreshToken", refreshToken);
+      redirectUrl.searchParams.append("status", "success");
 
       return res.redirect(redirectUrl.toString());
     } catch (error) {
@@ -508,25 +512,27 @@ const vippsCallback = async (req: Request, res: Response) => {
         error: error instanceof Error ? error.message : "Unknown error",
         email: userInfo.email,
       });
-      throw error;
+
+      return res.redirect(
+        `${clientUrl}/sign-in?status=error&message=${encodeURIComponent(
+          "Error processing login. Please try again or contact support."
+        )}`
+      );
     }
   } catch (error) {
-    // Enhanced error logging
     vippsLogger.error("Vipps callback failed", {
       error: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined,
       code: req.query.code,
       scope: req.query.scope,
       state: req.query.state,
-      fullError: error instanceof Error ? JSON.stringify(error) : error,
     });
 
-    return res.status(INTERNAL_SERVER_ERROR).json({
-      status: INTERNAL_SERVER_ERROR,
-      success: false,
-      message: "An error occurred during Vipps authentication",
-      details: error instanceof Error ? error.message : "Unknown error",
-    });
+    return res.redirect(
+      `${clientUrl}/sign-in?status=error&message=${encodeURIComponent(
+        "An unexpected error occurred. Please try again later."
+      )}`
+    );
   }
 };
 
