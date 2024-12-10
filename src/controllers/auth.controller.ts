@@ -450,8 +450,22 @@ const vippsCallback = async (req: Request, res: Response) => {
           primaryPhoneNumber: userInfo.phone_number || null,
         };
 
+        console.log("About to create new user with data:", {
+          firstName: newUser.firstName,
+          lastName: newUser.lastName,
+          email: newUser.primaryEmailAddress,
+          phone: newUser.primaryPhoneNumber,
+          address: newUser.address,
+        });
+
         try {
           const createdUserResponse = await authService.createUser(newUser);
+
+          console.log("User creation response:", {
+            success: !!createdUserResponse,
+            userId: createdUserResponse?.user?.user_id,
+            email: createdUserResponse?.user?.primaryEmailAddress,
+          });
 
           if (!createdUserResponse) {
             console.error("Failed to create user - email might be taken");
@@ -463,6 +477,12 @@ const vippsCallback = async (req: Request, res: Response) => {
           }
 
           user = createdUserResponse.user;
+          console.log("Successfully created new user:", {
+            userId: user.user_id,
+            email: user.primaryEmailAddress,
+            firstName: user.firstName,
+            lastName: user.lastName,
+          });
         } catch (error) {
           console.error("Error creating new user:", error);
           return res.redirect(

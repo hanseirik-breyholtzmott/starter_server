@@ -1,25 +1,26 @@
 import mongoose, { Schema, Document } from "mongoose";
 import { IUserModel } from "./users.model";
 
-export interface ISessionModel extends Document {
-  userId: string | mongoose.Types.ObjectId;
-  userAgent?: string;
-  token?: string;
+export interface ISession {
+  userId: string;
   expiresAt: Date;
 }
 
+export interface ISessionModel extends ISession, Document {}
+
 const SessionSchema: Schema = new Schema<ISessionModel>(
   {
-    userId: { type: Schema.Types.ObjectId, ref: "Users", required: true },
-    userAgent: { type: String, required: false },
-    token: { type: String, required: false },
+    userId: {
+      type: String,
+      ref: "Users",
+      required: true,
+    },
     expiresAt: {
       type: Date,
       required: true,
-      default: () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     },
   },
-  { timestamps: { createdAt: true, updatedAt: false } }
+  { timestamps: true }
 );
 
 // Make sure to use the correct name for the schema export
