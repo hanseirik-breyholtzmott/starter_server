@@ -58,30 +58,3 @@ server.listen(SERVER_PORT, async () => {
     }
   }
 });
-
-// Verify Vipps configuration
-const requiredEnvVars = [
-  "VIPPS_CLIENT_ID",
-  "VIPPS_CLIENT_SECRET",
-  "VIPPS_SUBSCRIPTION_KEY",
-  "VIPPS_MSN",
-  "VIPPS_REDIRECT_URI",
-];
-
-const missingEnvVars = requiredEnvVars.filter(
-  (varName) => !process.env[varName]
-);
-if (missingEnvVars.length > 0) {
-  throw new Error(
-    `Missing required environment variables: ${missingEnvVars.join(", ")}`
-  );
-}
-
-vippsLogger.info("Vipps configuration loaded", {
-  clientId: process.env.VIPPS_CLIENT_ID,
-  msn: process.env.VIPPS_MSN,
-  redirectUri: process.env.VIPPS_REDIRECT_URI,
-  hasSecret: !!process.env.VIPPS_CLIENT_SECRET,
-  hasSubKey: !!process.env.VIPPS_SUBSCRIPTION_KEY,
-  environment: process.env.NODE_ENV,
-});

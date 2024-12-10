@@ -120,8 +120,6 @@ const UsersSchema = new Schema(
     },
     ssn: {
       type: Schema.Types.String,
-      unique: true,
-      sparse: true,
       default: null,
     },
     firstName: { type: Schema.Types.String, default: null },
@@ -262,7 +260,11 @@ UsersSchema.pre("save", async function (next) {
   );
   await model.collection.createIndex(
     { ssn: 1 },
-    { unique: true, sparse: true }
+    {
+      unique: true,
+      sparse: true,
+      partialFilterExpression: { ssn: { $type: "string" } }, // Only index non-null string values
+    }
   );
 
   next();
