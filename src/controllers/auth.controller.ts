@@ -125,11 +125,7 @@ const refreshToken = async (req: Request, res: Response) => {
       });
     }
 
-    //console.log("refreshToken", refreshToken);
-
     const result = await authService.refreshUserAccessToken(refreshToken);
-
-    //console.log("result", result);
 
     if (result.success) {
       const user = await userService.getUserById(result.userId);
@@ -378,7 +374,7 @@ const vippsLogin = async (req: Request, res: Response) => {
 };
 
 const vippsCallback = async (req: Request, res: Response) => {
-  vippsLogger.info("Vipps callback initiated", {
+  console.log("Vipps callback initiated", {
     code: req.query.code,
     error: req.query.error,
     errorDescription: req.query.error_description,
@@ -391,6 +387,12 @@ const vippsCallback = async (req: Request, res: Response) => {
     process.env.CLIENT_BASE_URL || "https://invest.folkekraft.no";
 
   try {
+    console.log("Calling authService.vippsCallback with", {
+      code,
+      error,
+      error_description,
+      state,
+    });
     const result = await authService.vippsCallback(
       code as string,
       error as string,
@@ -398,19 +400,25 @@ const vippsCallback = async (req: Request, res: Response) => {
       state as string
     );
 
+    console.log("Vipps callback result", result);
+
     if (!result.success) {
       const redirectUrl = `${clientUrl}/sign-in?status=error&message=${encodeURIComponent(
         result.message
       )}`;
+      console.log("Redirecting to", redirectUrl);
       return res.redirect(redirectUrl);
     }
 
     const userInfo = result.data;
+    console.log("User info retrieved from Vipps", userInfo);
+
     try {
       let user = await userService.getUserByEmail(userInfo.email);
+      console.log("User found in database", user);
 
       if (!user) {
-        vippsLogger.info("Creating new user from Vipps login", {
+        console.log("Creating new user from Vipps login", {
           email: userInfo.email,
         });
 
@@ -443,6 +451,8 @@ const vippsCallback = async (req: Request, res: Response) => {
         };
 
         const createdUser = await authService.createUser(newUser);
+        console.log("New user created", createdUser);
+
         if (!createdUser) {
           throw new Error("Failed to create new user");
         }
@@ -450,6 +460,8 @@ const vippsCallback = async (req: Request, res: Response) => {
       }
 
       const session = await sessionService.createSession(user._id.toString());
+      console.log("Session created", session);
+
       const accessToken = signToken({
         userId: user._id.toString(),
         sessionId: session._id.toString(),
@@ -462,13 +474,15 @@ const vippsCallback = async (req: Request, res: Response) => {
         refreshTokenOptions
       );
 
-      const redirectUrl = new URL(`${clientUrl}/auth/callback/vipps`);
+      const redirectUrl = new URL(`${clientUrl}/api/auth/callback/vipps`);
       redirectUrl.searchParams.append("accessToken", accessToken);
       redirectUrl.searchParams.append("refreshToken", refreshToken);
       redirectUrl.searchParams.append("status", "success");
 
+      console.log("Redirecting to", redirectUrl.toString());
       return res.redirect(redirectUrl.toString());
     } catch (error) {
+      console.error("Error processing user info", error);
       return res.redirect(
         `${clientUrl}/sign-in?status=error&message=${encodeURIComponent(
           "Error processing login. Please try again or contact support."
@@ -476,6 +490,7 @@ const vippsCallback = async (req: Request, res: Response) => {
       );
     }
   } catch (error) {
+    console.error("Unexpected error in vippsCallback", error);
     return res.redirect(
       `${clientUrl}/sign-in?status=error&message=${encodeURIComponent(
         "An unexpected error occurred. Please try again later."

@@ -496,6 +496,7 @@ export const generateVippsLoginUrl = async (config: VippsLoginConfig) => {
   return loginUrl;
 };
 
+/*
 const vippsLogin = async () => {
   try {
     const config = {
@@ -517,7 +518,7 @@ const vippsLogin = async () => {
     throw new Error("Failed to generate Vipps login URL.");
   }
 };
-
+*/
 interface VippsTokenResponse {
   success: boolean;
   message: string;
@@ -552,8 +553,8 @@ interface OpenIDConfig {
 const fetchOpenIDConfig = async (): Promise<OpenIDConfig> => {
   const isProduction = process.env.NODE_ENV === "production";
   const configUrl = isProduction
-    ? "https://api.vipps.no/access-management-1.0/access/.well-known/openid-configuration"
-    : "https://apitest.vipps.no/access-management-1.0/access/.well-known/openid-configuration";
+    ? "https://api.vipps.no/access-management-1.0/access/"
+    : "https://apitest.vipps.no/access-management-1.0/access/";
 
   const response = await axios.get(configUrl);
   return response.data;
@@ -561,50 +562,47 @@ const fetchOpenIDConfig = async (): Promise<OpenIDConfig> => {
 
 // Function to get Vipps token
 const getVippsToken = async (code: string): Promise<VippsTokenResponse> => {
-  try {
-    const { token_endpoint } = await fetchOpenIDConfig();
+  //const { token_endpoint } = await fetchOpenIDConfig();
 
-    const headers = {
-      "Content-Type": "application/x-www-form-urlencoded",
-      "Merchant-Serial-Number": process.env.VIPPS_MSN!,
-      "Vipps-System-Name": "folkekraft",
-      "Vipps-System-Version": "1.0.0",
-      "Vipps-System-Plugin-Name": "folkekraft-api",
-      "Vipps-System-Plugin-Version": "1.0.0",
-      "Ocp-Apim-Subscription-Key": process.env.VIPPS_SUBSCRIPTION_KEY!,
+  const credentials = Buffer.from(
+    `${process.env.VIPPS_CLIENT_ID}:${process.env.VIPPS_CLIENT_SECRET}`
+  ).toString("base64");
+
+  const headers = {
+    "Content-Type": "application/x-www-form-urlencoded",
+    Authorization: `Basic ${credentials}`,
+    "Merchant-Serial-Number": process.env.VIPPS_MSN!,
+    "Vipps-System-Name": "folkekraft",
+    "Vipps-System-Version": "1.0.0",
+    "Vipps-System-Plugin-Name": "folkekraft-api",
+    "Vipps-System-Plugin-Version": "1.0.0",
+    //"Ocp-Apim-Subscription-Key": process.env.VIPPS_SUBSCRIPTION_KEY!,
+  };
+
+  const response = await axios.post(
+    "https://api.vipps.no/access-management-1.0/access/oauth2/token", // Note: using test endpoint
+    new URLSearchParams({
+      grant_type: "authorization_code",
+      code: code, // The code you got from Vipps redirect
+      redirect_uri: process.env.VIPPS_REDIRECT_URI!,
+    }).toString(),
+    { headers }
+  );
+
+  console.log("response", response.data);
+
+  if (response.data.access_token) {
+    return {
+      success: true,
+      message: "Successfully retrieved access token",
+      access_token: response.data.access_token,
     };
-
-    const response = await axios.post(
-      token_endpoint,
-      new URLSearchParams({
-        grant_type: "authorization_code",
-        code: code,
-        redirect_uri: process.env.VIPPS_REDIRECT_URI!,
-      }).toString(),
-      {
-        headers,
-        auth: {
-          username: process.env.VIPPS_CLIENT_ID!,
-          password: process.env.VIPPS_CLIENT_SECRET!,
-        },
-      }
-    );
-
-    if (response.data.access_token) {
-      return {
-        success: true,
-        message: "Successfully retrieved access token",
-        access_token: response.data.access_token,
-      };
-    } else {
-      return {
-        success: false,
-        message: "No access token in response",
-        error: "Missing access token",
-      };
-    }
-  } catch (error) {
-    return handleAxiosError(error, "Failed to get token");
+  } else {
+    return {
+      success: false,
+      message: "No access token in response",
+      error: "Missing access token",
+    };
   }
 };
 
@@ -612,29 +610,30 @@ const getVippsToken = async (code: string): Promise<VippsTokenResponse> => {
 export const vippsUserInfo = async (
   accessToken: string
 ): Promise<VippsUserInfoResponse> => {
-  try {
-    const { userinfo_endpoint } = await fetchOpenIDConfig();
+  //const { userinfo_endpoint } = await fetchOpenIDConfig();
 
-    const headers = {
-      Authorization: `Bearer ${accessToken}`,
-      "Ocp-Apim-Subscription-Key": process.env.VIPPS_SUBSCRIPTION_KEY!,
-      "Merchant-Serial-Number": process.env.VIPPS_MSN!,
-      "Vipps-System-Name": "folkekraft",
-      "Vipps-System-Version": "1.0.0",
-      "Vipps-System-Plugin-Name": "folkekraft-api",
-      "Vipps-System-Plugin-Version": "1.0.0",
-    };
+  const headers = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${accessToken}`,
+    "Merchant-Serial-Number": process.env.VIPPS_MSN!,
+    "Vipps-System-Name": "folkekraft",
+    "Vipps-System-Version": "1.0.0",
+    "Vipps-System-Plugin-Name": "folkekraft-api",
+    "Vipps-System-Plugin-Version": "1.0.0",
+  };
 
-    const response = await axios.get(userinfo_endpoint, { headers });
+  const response = await axios.get(
+    "https://api.vipps.no/vipps-userinfo-api/userinfo/",
+    { headers }
+  );
 
-    return {
-      success: true,
-      message: "User info retrieved",
-      data: response.data,
-    };
-  } catch (error) {
-    return handleAxiosError(error, "Error retrieving user info");
-  }
+  console.log("userinfo response", response.data);
+
+  return {
+    success: true,
+    message: "User info retrieved",
+    data: response.data,
+  };
 };
 
 // Helper function to handle Axios errors
