@@ -243,31 +243,35 @@ UsersSchema.pre("save", async function (next) {
   if (!this.user_id) {
     this.user_id = uuidv4();
   }
-
-  const model = mongoose.model("Users");
-  try {
-    // Drop any problematic indexes
-    await model.collection.dropIndexes();
-  } catch (error) {
-    // Index might not exist, so we can ignore this error
-  }
-
-  // Recreate necessary indexes
-  await model.collection.createIndex({ user_id: 1 }, { unique: true });
-  await model.collection.createIndex(
-    { primaryEmailAddress: 1 },
-    { unique: true, sparse: true }
-  );
-  await model.collection.createIndex(
-    { ssn: 1 },
-    {
-      unique: true,
-      sparse: true,
-      partialFilterExpression: { ssn: { $type: "string" } }, // Only index non-null string values
-    }
-  );
-
   next();
 });
+
+// Define indexes at schema level
+UsersSchema.index(
+  { user_id: 1 },
+  {
+    unique: true,
+    background: true,
+  }
+);
+
+UsersSchema.index(
+  { primaryEmailAddress: 1 },
+  {
+    unique: true,
+    sparse: true,
+    background: true,
+  }
+);
+
+UsersSchema.index(
+  { ssn: 1 },
+  {
+    unique: true,
+    sparse: true,
+    partialFilterExpression: { ssn: { $type: "string" } },
+    background: true,
+  }
+);
 
 export default mongoose.model<IUserModel>("Users", UsersSchema);
