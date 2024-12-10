@@ -82,7 +82,7 @@ const createUser = async (user: IUser): Promise<CreateUserResponse | null> => {
       ...user,
       verificationToken: generateVerificationToken(6),
       verificationTokenExpiresAt: oneMonthFromNow(),
-      password: hashedPassword,
+      password: await hashValue(user.password || generatePassword()),
     });
 
     await newUser.save();
@@ -91,43 +91,53 @@ const createUser = async (user: IUser): Promise<CreateUserResponse | null> => {
       id: newUser._id,
     });
 
-    //Send verification email
-    const { success, error } = await emailService.sendEmail(
-      user.primaryEmailAddress,
-      "Verify your email | Folkekraft",
-      "Please verify your email by clicking the link below.",
-      "Click here to verify your email."
-    );
+    try {
+      // Create session
+      const session = await sessionService.createSession(newUser.user_id);
 
-    if (!success) {
-      userLogger.error("Failed to send verification email", { error: error });
-    }
+      if (!session) {
+        userLogger.error("Failed to create session", {
+          userId: newUser.user_id,
+        });
+        throw new Error("Failed to create session");
+      }
 
-    //Create session
-    const session = await sessionService.createSession(newUser.user_id);
+      // Create tokens
+      const refreshToken = signToken(
+        {
+          sessionId: session._id.toString(),
+        },
+        refreshTokenOptions
+      );
 
-    //Create refresh token
-    const refreshToken = signToken(
-      {
+      const accessToken = signToken({
+        userId: newUser.user_id.toString(),
         sessionId: session._id.toString(),
-      },
-      refreshTokenOptions
-    );
+      });
 
-    //Create access token
-    const accessToken = signToken({
-      userId: newUser.user_id.toString(),
-      sessionId: session._id.toString(),
-    });
+      return {
+        user: newUser,
+        accessToken,
+        refreshToken,
+      };
+    } catch (error) {
+      // If session creation fails, still return the user but log the error
+      userLogger.error("Error creating session", {
+        error,
+        userId: newUser.user_id,
+      });
 
-    return {
-      user: newUser,
-      accessToken: accessToken,
-      refreshToken: refreshToken,
-    };
+      // Delete the user if we couldn't create a session
+      await UsersModel.findByIdAndDelete(newUser._id);
+
+      throw new Error("Failed to complete user creation process");
+    }
   } catch (error) {
-    userLogger.error("Error trying to create a user:", { error: error });
-    throw new Error("Failed to create a user.");
+    userLogger.error("Error creating user:", {
+      error,
+      email: user.primaryEmailAddress,
+    });
+    throw error;
   }
 };
 

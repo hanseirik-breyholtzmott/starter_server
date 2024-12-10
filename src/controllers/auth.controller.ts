@@ -450,18 +450,27 @@ const vippsCallback = async (req: Request, res: Response) => {
           primaryPhoneNumber: userInfo.phone_number || null,
         };
 
-        const createdUserResponse = await authService.createUser(newUser);
+        try {
+          const createdUserResponse = await authService.createUser(newUser);
 
-        if (!createdUserResponse) {
-          console.error("Failed to create user - email might be taken");
+          if (!createdUserResponse) {
+            console.error("Failed to create user - email might be taken");
+            return res.redirect(
+              `${clientUrl}/sign-in?status=error&message=${encodeURIComponent(
+                "This email is already registered. Please try logging in with your existing account."
+              )}`
+            );
+          }
+
+          user = createdUserResponse.user;
+        } catch (error) {
+          console.error("Error creating new user:", error);
           return res.redirect(
             `${clientUrl}/sign-in?status=error&message=${encodeURIComponent(
-              "This email is already registered. Please try logging in with your existing account."
+              "An error occurred while creating your account. Please try again later."
             )}`
           );
         }
-
-        user = createdUserResponse.user;
       }
 
       const session = await sessionService.createSession(user._id.toString());

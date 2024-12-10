@@ -45,12 +45,15 @@ const sendEmail = async (
   html: string
 ): Promise<SendEmailResponse> => {
   try {
+    const fromEmail =
+      process.env.EMAIL_FROM || "Folkekraft <no-reply@folkekraft.no>";
+
     console.log("Sending email to:", to);
-    console.log("From:", getFromEmail());
+    console.log("From:", fromEmail);
 
     // Send email
     const { data, error } = await resend.emails.send({
-      from: getFromEmail(),
+      from: fromEmail,
       to: getToEmail(to),
       subject,
       text,

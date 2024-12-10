@@ -5,17 +5,31 @@ import sessionModel, { ISessionModel } from "../models/session.model";
 //Logger
 import { sessionLogger } from "../logger";
 
+//Utils
+import { oneMonthFromNow } from "../utils/date";
+
 const createSession = async (userId: string): Promise<ISessionModel> => {
   try {
-    const session = await sessionModel.create({
-      userId: new Types.ObjectId(userId),
-      expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 2 weeks
+    const session = new sessionModel({
+      userId,
+      expiresAt: oneMonthFromNow(),
     });
-    sessionLogger.info("Session created", { userId: userId });
+
+    await session.save();
+
+    sessionLogger.info("Session created successfully", {
+      userId,
+      sessionId: session._id,
+    });
+
     return session;
   } catch (error) {
-    sessionLogger.error("Error creating a session", { userId, error });
-    throw new Error("Error creating session.");
+    sessionLogger.error("Error creating session", {
+      error,
+      userId,
+      errorMessage: error instanceof Error ? error.message : "Unknown error",
+    });
+    throw error;
   }
 };
 
