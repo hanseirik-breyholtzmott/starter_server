@@ -44,51 +44,30 @@ interface CreateUserResponse {
 //Email templates
 import { getPasswordResetEmail } from "../emails/passwordReset.email";
 
-// Add this function
-const cleanupUserData = async (email: string) => {
-  try {
-    // Force remove any existing user with this email
-    await UsersModel.deleteMany({ primaryEmailAddress: email });
-    userLogger.info("Cleaned up existing user data", { email });
-  } catch (error) {
-    userLogger.error("Error cleaning up user data", {
-      error,
-      email,
-    });
-  }
-};
-
 //Create user
 const createUser = async (user: IUser): Promise<CreateUserResponse | null> => {
-  try {
-    // Clean up any existing data first
-    await cleanupUserData(user.primaryEmailAddress);
+  //Check if email exists
+  const isEmailTaken = await userService.isEmailTaken(user.primaryEmailAddress);
 
-    //Check if email exists with more detailed check
-    const existingUser = await UsersModel.findOne({
-      primaryEmailAddress: user.primaryEmailAddress,
+  if (isEmailTaken) {
+    userLogger.warn("Attempt to create user with existing email", {
+      email: user.primaryEmailAddress,
     });
+    return null;
+  }
 
-    if (existingUser) {
-      userLogger.warn("Attempt to create user with existing email", {
-        email: user.primaryEmailAddress,
-        existingUserId: existingUser._id,
+  if (user.ssn !== "") {
+    const isSsnTaken = await userService.isSsnTaken(user.ssn);
+
+    if (isSsnTaken) {
+      userLogger.warn("Attempt to create user with existing SSN", {
+        ssn: user.ssn,
       });
       return null;
     }
+  }
 
-    if (user.ssn !== "") {
-      const isSsnTaken = await userService.isSsnTaken(user.ssn);
-
-      if (isSsnTaken) {
-        userLogger.warn("Attempt to create user with existing SSN", {
-          ssn: user.ssn,
-        });
-        return null;
-      }
-    }
-
-    // Generate password if not provided
+  try {
     let password = user.password;
     if (!password) {
       password = generatePassword();
@@ -111,6 +90,18 @@ const createUser = async (user: IUser): Promise<CreateUserResponse | null> => {
       email: user.primaryEmailAddress,
       id: newUser._id,
     });
+
+    //Send verification email
+    const { success, error } = await emailService.sendEmail(
+      user.primaryEmailAddress,
+      "Verify your email | Folkekraft",
+      "Please verify your email by clicking the link below.",
+      "Click here to verify your email."
+    );
+
+    if (!success) {
+      userLogger.error("Failed to send verification email", { error: error });
+    }
 
     //Create session
     const session = await sessionService.createSession(newUser.user_id);
@@ -135,27 +126,8 @@ const createUser = async (user: IUser): Promise<CreateUserResponse | null> => {
       refreshToken: refreshToken,
     };
   } catch (error) {
-    userLogger.error("Error creating user:", {
-      error: error,
-      errorName: error.name,
-      errorCode: error.code,
-      email: user.primaryEmailAddress,
-      stack: error instanceof Error ? error.stack : undefined,
-      // Add mongoose-specific error details
-      mongoError:
-        error.name === "MongoError"
-          ? {
-              code: error.code,
-              keyPattern: error.keyPattern,
-              keyValue: error.keyValue,
-            }
-          : undefined,
-    });
-    throw new Error(
-      `Failed to create user: ${
-        error instanceof Error ? error.message : "Unknown error"
-      }`
-    );
+    userLogger.error("Error trying to create a user:", { error: error });
+    throw new Error("Failed to create a user.");
   }
 };
 

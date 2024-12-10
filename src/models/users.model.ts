@@ -109,6 +109,9 @@ const UsersSchema = new Schema(
   {
     user_id: {
       type: Schema.Types.String,
+      unique: true,
+      default: () => uuidv4(),
+      required: true,
     },
     userId: {
       type: Schema.Types.String,
@@ -239,18 +242,30 @@ const UsersSchema = new Schema(
 
 // Pre-save hook to ensure the id is set
 UsersSchema.pre("save", async function (next) {
-  if (!this.id) {
-    this.id = uuidv4();
+  if (!this.user_id) {
+    this.user_id = uuidv4();
   }
+
   const model = mongoose.model("Users");
   try {
-    await model.collection.dropIndex("ssn_1");
+    // Drop any problematic indexes
+    await model.collection.dropIndexes();
   } catch (error) {
     // Index might not exist, so we can ignore this error
   }
+
+  // Recreate necessary indexes
+  await model.collection.createIndex({ user_id: 1 }, { unique: true });
+  await model.collection.createIndex(
+    { primaryEmailAddress: 1 },
+    { unique: true, sparse: true }
+  );
+  await model.collection.createIndex(
+    { ssn: 1 },
+    { unique: true, sparse: true }
+  );
+
   next();
 });
-
-UsersSchema.index({ ssn: 1 }, { unique: true, sparse: true });
 
 export default mongoose.model<IUserModel>("Users", UsersSchema);
