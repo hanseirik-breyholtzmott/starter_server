@@ -28,8 +28,6 @@ import { generateVerificationToken } from "../utils/helperFunctions";
 const register = async (req: Request, res: Response) => {
   const { firstName, lastName, email, password } = req.body;
 
-  console.log("register", firstName, lastName, email, password);
-
   try {
     const user: IUser = {
       firstName,

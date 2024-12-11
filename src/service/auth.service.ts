@@ -76,8 +76,6 @@ const createUser = async (user: IUser): Promise<CreateUserResponse | null> => {
       });
     }
 
-    const hashedPassword = await hashValue(password);
-
     const newUser = new UsersModel({
       ...user,
       verificationToken: generateVerificationToken(6),
@@ -90,6 +88,8 @@ const createUser = async (user: IUser): Promise<CreateUserResponse | null> => {
       email: user.primaryEmailAddress,
       id: newUser._id,
     });
+
+    //TODO: send email to user
 
     try {
       // Create session
