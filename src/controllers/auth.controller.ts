@@ -133,6 +133,11 @@ const refreshToken = async (req: Request, res: Response) => {
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.primaryEmailAddress,
+        roles: user.roles.map((role) => ({
+          name: role.name,
+          permissions: role.permissions,
+        })),
+        permissions: user.roles.flatMap((role) => role.permissions),
       };
 
       return res.status(OK).json({
